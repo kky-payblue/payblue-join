@@ -17,8 +17,10 @@ const SHARP_THRESH = 8;         // min Laplacian variance for "sharp"
 const STABLE_FRAMES = 4;        // consecutive stable+sharp frames → auto capture (~1s)
 const BLUR_CHECK_THRESH = 6;    // final image sharpness threshold
 const RETRY_DELAY = 1500;       // ms to show "blurry" message before retry
+const BORDER_RATIO = 0.10;      // border strip = 10% of each edge
+const BORDER_EDGE_THRESH = 12;  // if border edge density > this, card is too close
 
-type DetectPhase = 'waiting' | 'detected' | 'stabilizing' | 'blurry';
+type DetectPhase = 'waiting' | 'too_close' | 'detected' | 'stabilizing' | 'blurry';
 
 @Component({
   selector: 'app-id-camera-guide',
@@ -39,7 +41,8 @@ type DetectPhase = 'waiting' | 'detected' | 'stabilizing' | 'blurry';
           </defs>
           <rect width="100%" height="100%" fill="rgba(0,0,0,.55)" mask="url(#gm)"/>
         </svg>
-        <div class="frame" [class.frame--detected]="phase()==='detected'"
+        <div class="frame" [class.frame--too-close]="phase()==='too_close'"
+             [class.frame--detected]="phase()==='detected'"
              [class.frame--stable]="phase()==='stabilizing'"
              [class.frame--blurry]="phase()==='blurry'"
              [style.left.px]="gr().x" [style.top.px]="gr().y"
@@ -62,11 +65,13 @@ type DetectPhase = 'waiting' | 'detected' | 'stabilizing' | 'blurry';
 
         <!-- Status text -->
         <p class="txt txt-t" [style.bottom]="'calc(50% + '+(gr().h/2+20)+'px)'"
+           [class.txt--too-close]="phase()==='too_close'"
            [class.txt--detected]="phase()==='detected'"
            [class.txt--stable]="phase()==='stabilizing'"
            [class.txt--blurry]="phase()==='blurry'">
           @switch (phase()) {
             @case ('waiting') { 프레임 안에 신분증 전체가 보이도록 맞춰주세요 }
+            @case ('too_close') { 신분증을 카메라에서 조금 떨어뜨려 주세요 }
             @case ('detected') { 움직이지 마세요... }
             @case ('stabilizing') { 자동 촬영 중... }
             @case ('blurry') { 선명하지 않습니다. 다시 촬영합니다. }
@@ -75,6 +80,7 @@ type DetectPhase = 'waiting' | 'detected' | 'stabilizing' | 'blurry';
         <p class="txt txt-b" [style.top]="'calc(50% + '+(gr().h/2+12)+'px)'">
           @switch (phase()) {
             @case ('waiting') { 신분증이 프레임보다 작게, 여유 있게 띄워주세요 }
+            @case ('too_close') { 프레임 안쪽에 여백이 보여야 자동 촬영됩니다 }
             @default { 주민등록증, 운전면허증, 여권 }
           }
         </p>
@@ -121,6 +127,9 @@ type DetectPhase = 'waiting' | 'detected' | 'stabilizing' | 'blurry';
     .frame { position:absolute; border:2px solid rgba(255,255,255,.5);
       border-radius:12px; pointer-events:none;
       transition:border-color .3s ease, box-shadow .3s ease; }
+    .frame--too-close { border-color:rgba(251,146,60,.9);
+      box-shadow:0 0 0 2px rgba(251,146,60,.25); animation:pulse-close 1s ease-in-out infinite; }
+    @keyframes pulse-close { 0%,100%{box-shadow:0 0 0 2px rgba(251,146,60,.25)} 50%{box-shadow:0 0 0 6px rgba(251,146,60,.15)} }
     .frame--detected { border-color:rgba(250,204,21,.8);
       box-shadow:0 0 0 2px rgba(250,204,21,.2); }
     .frame--stable { border-color:rgba(74,222,128,.9);
@@ -131,6 +140,7 @@ type DetectPhase = 'waiting' | 'detected' | 'stabilizing' | 'blurry';
     .c::before,.c::after { content:''; position:absolute; border-radius:2px;
       transition:background .3s ease; }
     .frame .c::before,.frame .c::after { background:#fff; }
+    .frame--too-close .c::before,.frame--too-close .c::after { background:#fb923c; }
     .frame--detected .c::before,.frame--detected .c::after { background:#facc15; }
     .frame--stable .c::before,.frame--stable .c::after { background:#4ade80; }
     .frame--blurry .c::before,.frame--blurry .c::after { background:#f87171; }
@@ -151,6 +161,7 @@ type DetectPhase = 'waiting' | 'detected' | 'stabilizing' | 'blurry';
       margin:0; text-shadow:0 1px 4px rgba(0,0,0,.6);
       transition:color .3s ease; }
     .txt-t { font-size:var(--pb-text-base,1rem); font-weight:var(--pb-weight-semibold,600); }
+    .txt--too-close { color:#fb923c; }
     .txt--detected { color:#facc15; }
     .txt--stable { color:#4ade80; }
     .txt--blurry { color:#f87171; }
@@ -392,7 +403,10 @@ export class IdCameraGuideComponent implements OnChanges, OnDestroy {
     const contentStd = this.stdDev(gray);
     const hasContent = contentStd > CONTENT_THRESH;
 
-    // 2. Stability check: frame difference
+    // 2. Border proximity check — is the card too close to the frame edges?
+    const isTooClose = hasContent && this.checkBorderEdges(gray, aw, ah);
+
+    // 3. Stability check: frame difference
     let isStable = false;
     if (this.prevGray && this.prevGray.length === gray.length) {
       const diff = this.frameDiff(gray, this.prevGray);
@@ -400,7 +414,7 @@ export class IdCameraGuideComponent implements OnChanges, OnDestroy {
     }
     this.prevGray = gray;
 
-    // 3. Sharpness check: Laplacian variance
+    // 4. Sharpness check: Laplacian variance
     const sharpness = this.laplacianVariance(gray, aw, ah);
     const isSharp = sharpness > SHARP_THRESH;
 
@@ -412,6 +426,9 @@ export class IdCameraGuideComponent implements OnChanges, OnDestroy {
     if (!hasContent) {
       this.stableCount = 0;
       newPhase = 'waiting';
+    } else if (isTooClose) {
+      this.stableCount = 0;
+      newPhase = 'too_close';
     } else if (!isStable || !isSharp) {
       this.stableCount = 0;
       newPhase = 'detected';
@@ -506,6 +523,34 @@ export class IdCameraGuideComponent implements OnChanges, OnDestroy {
       sum += Math.abs(a[i] - b[i]);
     }
     return sum / a.length;
+  }
+
+  /**
+   * Check if card edges are too close to the guide frame border.
+   * Measures edge density (gradient magnitude) in the border strips.
+   * High edge density in borders = card is filling the frame = too close.
+   */
+  private checkBorderEdges(gray: Uint8ClampedArray, w: number, h: number): boolean {
+    const bx = Math.max(2, Math.round(w * BORDER_RATIO));
+    const by = Math.max(2, Math.round(h * BORDER_RATIO));
+    let edgeSum = 0;
+    let edgeCount = 0;
+
+    // Scan 4 border strips using horizontal gradient |g[x+1] - g[x-1]|
+    for (let y = 1; y < h - 1; y++) {
+      for (let x = 1; x < w - 1; x++) {
+        const inBorder =
+          y < by || y >= h - by || x < bx || x >= w - bx;
+        if (!inBorder) continue;
+        const idx = y * w + x;
+        const gx = Math.abs(gray[idx + 1] - gray[idx - 1]);
+        const gy = Math.abs(gray[idx + w] - gray[idx - w]);
+        edgeSum += gx + gy;
+        edgeCount++;
+      }
+    }
+    if (edgeCount === 0) return false;
+    return (edgeSum / edgeCount) > BORDER_EDGE_THRESH;
   }
 
   /** Laplacian variance — higher = sharper */
