@@ -1,0 +1,38 @@
+:host {
+  display: block;
+  width: 100%;
+}
+
+.card {
+  background-color: #fff;
+  border-radius: var(--pb-radius-lg);
+  box-shadow: var(--pb-shadow-card);
+  padding: var(--pb-space-6);
+}
+
+/* ── Signup variant ── */
+.card--signup {
+  max-width: var(--pb-container-sm);
+  margin: 0 auto;
+  padding: var(--pb-space-10) var(--pb-space-8);
+}
+
+/* ── Mobile adjustments ── */
+@media (max-width: 480px) {
+  .card {
+    border-radius: var(--pb-radius-lg) var(--pb-radius-lg) 0 0;
+    box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.08);
+    padding: var(--pb-space-5);
+  }
+
+  .card--signup {
+    padding: var(--pb-space-6) var(--pb-space-5);
+  }
+}
+
+/* ── Dark mode ── */
+@media (prefers-color-scheme: dark) {
+  .card {
+    background-color: var(--pb-bg-card, #1A2435);
+  }
+}

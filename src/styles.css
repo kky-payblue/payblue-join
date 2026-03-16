@@ -1,0 +1,135 @@
+@import 'app/shared/styles/tokens.css';
+@import 'app/shared/styles/animations.css';
+
+/* ══════════════════════════════════════════════
+   PayBlue Global Styles
+   ══════════════════════════════════════════════ */
+
+/* ── CSS Reset ── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  font-family: var(--pb-font-primary);
+  font-size: var(--pb-text-base);
+  line-height: var(--pb-leading-normal);
+  color: var(--pb-gray-700);
+  background: var(--pb-gray-50);
+  min-height: 100dvh;
+}
+
+img,
+picture,
+video,
+canvas,
+svg {
+  display: block;
+  max-width: 100%;
+}
+
+input,
+button,
+textarea,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+ul,
+ol {
+  list-style: none;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+table {
+  border-collapse: collapse;
+  border-spacing: 0;
+}
+
+/* ── Selection ── */
+::selection {
+  background-color: var(--pb-primary-100);
+  color: var(--pb-primary-800);
+}
+
+/* ── Focus ── */
+:focus-visible {
+  outline: 2px solid var(--pb-primary-400);
+  outline-offset: 2px;
+}
+
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* ── Screen Reader Only ── */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* ── Reduced Motion ── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--pb-gray-100);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--pb-gray-300);
+  border-radius: var(--pb-radius-full);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--pb-gray-400);
+}
+
+/* Firefox */
+html {
+  scrollbar-width: thin;
+  scrollbar-color: var(--pb-gray-300) var(--pb-gray-100);
+}

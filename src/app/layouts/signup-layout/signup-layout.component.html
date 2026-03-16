@@ -1,0 +1,93 @@
+<div class="signup-layout">
+  <!-- Mobile: Top Brand Bar -->
+  <header class="brand-bar">
+    <div class="brand-logo">
+      <img src="assets/logo.png" alt="스마트상점" class="brand-logo-img" />
+    </div>
+  </header>
+
+  <!-- Desktop: Left Brand Panel -->
+  <aside class="brand-panel" aria-hidden="true">
+    <div class="brand-panel-content">
+      <div class="brand-panel-logo">
+        <img src="assets/logo.png" alt="스마트상점" class="brand-panel-logo-img" />
+      </div>
+
+      <h1 class="brand-panel-tagline">결제의<br>새로운 기준</h1>
+
+      <ul class="brand-features">
+        <li class="brand-feature">
+          <span class="brand-feature-icon">&#10003;</span>
+          <span>빠른 가입, 간편한 시작</span>
+        </li>
+        <li class="brand-feature">
+          <span class="brand-feature-icon">&#10003;</span>
+          <span>안전한 결제 시스템</span>
+        </li>
+        <li class="brand-feature">
+          <span class="brand-feature-icon">&#10003;</span>
+          <span>실시간 정산 관리</span>
+        </li>
+      </ul>
+    </div>
+  </aside>
+
+  <!-- Right: Form Area -->
+  <div class="form-wrapper">
+    <div class="form-inner">
+      <!-- Stepper -->
+      <nav class="stepper-container" aria-label="가입 진행 단계">
+        <ol class="stepper">
+          @for (step of stepStatus(); track step.number; let last = $last) {
+            <li class="stepper-step">
+              <div class="step-indicator">
+                <span
+                  class="step-dot"
+                  [class.active]="step.isActive"
+                  [class.completed]="step.isCompleted"
+                  [attr.aria-current]="step.isActive ? 'step' : null"
+                >
+                  @if (step.isCompleted) {
+                    &#10003;
+                  } @else {
+                    {{ step.number }}
+                  }
+                </span>
+                <span
+                  class="step-label"
+                  [class.active]="step.isActive"
+                  [class.completed]="step.isCompleted"
+                >
+                  {{ step.label }}
+                </span>
+              </div>
+            </li>
+            @if (!last) {
+              <div
+                class="step-connector"
+                [class.completed]="step.isCompleted"
+              ></div>
+            }
+          }
+        </ol>
+      </nav>
+
+      <!-- Step Info -->
+      <div class="step-info">
+        {{ currentStep() }} / {{ steps().length }} 단계
+      </div>
+
+      <!-- Form Content -->
+      <main class="form-panel">
+        <div class="form-card pb-animate-fadeIn">
+          <router-outlet />
+        </div>
+      </main>
+
+      <!-- Footer -->
+      <footer class="signup-footer">
+        &copy; 스마트상점. All rights reserved.
+      </footer>
+    </div>
+  </div>
+</div>

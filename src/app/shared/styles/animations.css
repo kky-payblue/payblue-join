@@ -1,0 +1,122 @@
+/* ══════════════════════════════════════════════
+   PayBlue Animations
+   GPU-accelerated (transform/opacity only)
+   ══════════════════════════════════════════════ */
+
+/* ── Step Transitions ── */
+@keyframes pb-slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes pb-slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* ── Error Message ── */
+@keyframes pb-slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ── Validation Check ── */
+@keyframes pb-checkIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* ── Success Icon ── */
+@keyframes pb-successPulse {
+  0% {
+    opacity: 0;
+    transform: scale(0);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  70% {
+    transform: scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* ── Loading Spinner ── */
+@keyframes pb-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ── Fade In ── */
+@keyframes pb-fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* ── Utility Classes ── */
+.pb-animate-slideInRight {
+  animation: pb-slideInRight var(--pb-duration-normal) var(--pb-ease-out) both;
+}
+
+.pb-animate-slideInLeft {
+  animation: pb-slideInLeft var(--pb-duration-normal) var(--pb-ease-out) both;
+}
+
+.pb-animate-slideDown {
+  animation: pb-slideDown var(--pb-duration-fast) var(--pb-ease-out) both;
+}
+
+.pb-animate-fadeIn {
+  animation: pb-fadeIn var(--pb-duration-normal) var(--pb-ease-out) both;
+}
+
+.pb-animate-spin {
+  animation: pb-spin 0.8s linear infinite;
+}
+
+.pb-animate-pulse {
+  animation: pb-successPulse var(--pb-duration-slow) var(--pb-ease-spring) both;
+}
+
+.pb-animate-checkIn {
+  animation: pb-checkIn var(--pb-duration-normal) var(--pb-ease-spring) both;
+}

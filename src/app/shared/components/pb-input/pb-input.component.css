@@ -1,0 +1,145 @@
+:host {
+  display: block;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pb-space-2);
+}
+
+/* ── Label ── */
+.field__label {
+  font-family: var(--pb-font-primary);
+  font-size: var(--pb-text-sm);
+  font-weight: var(--pb-weight-medium);
+  color: var(--pb-gray-700);
+}
+
+.field__required {
+  color: var(--pb-error-500);
+  margin-left: 2px;
+}
+
+/* ── Input wrapper ── */
+.field__wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.field__icon {
+  position: absolute;
+  left: var(--pb-space-3);
+  font-size: 20px;
+  color: var(--pb-gray-400);
+  pointer-events: none;
+  transition: color var(--pb-duration-fast) var(--pb-ease-out);
+  z-index: 1;
+}
+
+/* ── Input ── */
+.field__input {
+  width: 100%;
+  padding: var(--pb-form-input-padding);
+  font-family: var(--pb-font-primary);
+  font-size: var(--pb-text-base);
+  color: var(--pb-gray-800);
+  background-color: var(--pb-gray-50);
+  border: 1.5px solid var(--pb-gray-200);
+  border-radius: var(--pb-radius-md);
+  outline: none;
+  transition:
+    border-color var(--pb-duration-fast) var(--pb-ease-out),
+    background-color var(--pb-duration-fast) var(--pb-ease-out),
+    box-shadow var(--pb-duration-fast) var(--pb-ease-out);
+}
+
+.field__input--with-icon {
+  padding-left: calc(var(--pb-space-3) + 20px + var(--pb-space-2));
+}
+
+.field__input::placeholder {
+  color: var(--pb-gray-400);
+}
+
+.field__input:hover:not(:disabled) {
+  border-color: var(--pb-gray-300);
+}
+
+/* ── Focus state ── */
+.field--focused .field__input {
+  border-color: var(--pb-primary-500);
+  background-color: #fff;
+  box-shadow: 0 0 0 3px rgba(0, 112, 224, 0.12);
+}
+
+.field--focused .field__icon {
+  color: var(--pb-primary-500);
+}
+
+/* ── Valid state ── */
+.field--valid .field__input {
+  border-color: var(--pb-success-500);
+}
+
+/* ── Error state ── */
+.field--error .field__input {
+  border-color: var(--pb-error-500);
+  background-color: var(--pb-error-50);
+}
+
+.field--error .field__icon {
+  color: var(--pb-error-500);
+}
+
+/* ── Disabled state ── */
+.field--disabled .field__input {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background-color: var(--pb-gray-100);
+}
+
+/* ── Help text ── */
+.field__help {
+  margin: 0;
+  font-family: var(--pb-font-primary);
+  font-size: var(--pb-text-xs);
+  color: var(--pb-gray-500);
+}
+
+/* ── Error message with slide animation ── */
+.field__error {
+  margin: 0;
+  font-family: var(--pb-font-primary);
+  font-size: var(--pb-text-xs);
+  font-weight: var(--pb-weight-medium);
+  color: var(--pb-error-500);
+  animation: slideDown var(--pb-duration-normal) var(--pb-ease-out);
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+    max-height: 0;
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    max-height: 2rem;
+  }
+}
+
+/* ── Dark mode ── */
+@media (prefers-color-scheme: dark) {
+  .field__label {
+    color: var(--pb-text-primary, #F1F4F8);
+  }
+
+  .field__input {
+    background-color: var(--pb-bg-elevated, #243044);
+    border-color: var(--pb-border, #2D3B4E);
+    color: var(--pb-text-primary, #F1F4F8);
+  }
+}

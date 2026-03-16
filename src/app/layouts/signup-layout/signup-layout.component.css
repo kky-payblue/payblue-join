@@ -1,0 +1,314 @@
+/* ══════════════════════════════════════════════
+   SignupLayout — Mobile-First
+   ══════════════════════════════════════════════ */
+
+:host {
+  display: block;
+  min-height: 100dvh;
+  background: var(--pb-gray-50);
+}
+
+/* ── Mobile Layout ── */
+.signup-layout {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+}
+
+/* ── Mobile: Top Brand Bar ── */
+.brand-bar {
+  background: var(--pb-bg-gradient);
+  padding: var(--pb-space-4) var(--pb-space-6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.brand-logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.brand-logo-img {
+  height: 32px;
+  width: auto;
+  object-fit: contain;
+}
+
+/* ── Desktop: Brand Panel (hidden on mobile) ── */
+.brand-panel {
+  display: none;
+}
+
+/* ── Stepper ── */
+.stepper-container {
+  padding: var(--pb-space-6) var(--pb-space-6) 0;
+}
+
+.stepper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+.stepper-step {
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+
+.step-indicator {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--pb-space-1);
+  position: relative;
+}
+
+.step-dot {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--pb-radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--pb-text-sm);
+  font-weight: var(--pb-weight-semibold);
+  transition: all var(--pb-duration-normal) var(--pb-ease-out);
+  border: 2px solid var(--pb-gray-300);
+  background: #fff;
+  color: var(--pb-gray-400);
+}
+
+.step-dot.active {
+  border-color: var(--pb-primary-500);
+  background: var(--pb-primary-500);
+  color: #fff;
+}
+
+.step-dot.completed {
+  border-color: var(--pb-success-500);
+  background: var(--pb-success-500);
+  color: #fff;
+}
+
+.step-label {
+  font-size: var(--pb-text-xs);
+  color: var(--pb-gray-400);
+  white-space: nowrap;
+  transition: color var(--pb-duration-normal) var(--pb-ease-out);
+}
+
+.step-label.active {
+  color: var(--pb-primary-500);
+  font-weight: var(--pb-weight-medium);
+}
+
+.step-label.completed {
+  color: var(--pb-success-700);
+}
+
+.step-connector {
+  width: 40px;
+  height: 2px;
+  background: var(--pb-gray-300);
+  margin: 0 var(--pb-space-1);
+  margin-bottom: var(--pb-space-5);
+  transition: background var(--pb-duration-normal) var(--pb-ease-out);
+}
+
+.step-connector.completed {
+  background: var(--pb-success-500);
+}
+
+/* ── Step Info ── */
+.step-info {
+  text-align: center;
+  padding: var(--pb-space-2) var(--pb-space-6) 0;
+  font-size: var(--pb-text-sm);
+  color: var(--pb-gray-500);
+}
+
+/* ── Form Panel ── */
+.form-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: var(--pb-space-6);
+}
+
+.form-card {
+  flex: 1;
+  background: #fff;
+  border-radius: var(--pb-radius-lg);
+  box-shadow: var(--pb-shadow-card);
+  padding: var(--pb-space-8) var(--pb-space-6);
+}
+
+/* ── Footer ── */
+.signup-footer {
+  text-align: center;
+  padding: var(--pb-space-6);
+  font-size: var(--pb-text-sm);
+  color: var(--pb-gray-500);
+}
+
+.signup-footer a {
+  color: var(--pb-primary-500);
+  font-weight: var(--pb-weight-medium);
+  transition: color var(--pb-duration-fast) var(--pb-ease-out);
+}
+
+.signup-footer a:hover {
+  color: var(--pb-primary-700);
+}
+
+/* ══════════════════════════════════════════════
+   Desktop Layout (1024px+)
+   ══════════════════════════════════════════════ */
+@media (min-width: 1024px) {
+  .signup-layout {
+    flex-direction: row;
+  }
+
+  /* Hide mobile brand bar on desktop */
+  .brand-bar {
+    display: none;
+  }
+
+  /* Show desktop brand panel */
+  .brand-panel {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    width: 40%;
+    min-width: 360px;
+    max-width: 520px;
+    background: var(--pb-bg-gradient);
+    color: #fff;
+    padding: var(--pb-space-16) var(--pb-space-12);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .brand-panel::before {
+    content: '';
+    position: absolute;
+    top: -30%;
+    right: -20%;
+    width: 400px;
+    height: 400px;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.08) 0%, transparent 70%);
+    border-radius: var(--pb-radius-full);
+    pointer-events: none;
+  }
+
+  .brand-panel::after {
+    content: '';
+    position: absolute;
+    bottom: -20%;
+    left: -10%;
+    width: 300px;
+    height: 300px;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.05) 0%, transparent 70%);
+    border-radius: var(--pb-radius-full);
+    pointer-events: none;
+  }
+
+  .brand-panel-content {
+    position: relative;
+    z-index: 1;
+  }
+
+  .brand-panel-logo {
+    display: flex;
+    align-items: center;
+    margin-bottom: var(--pb-space-10);
+  }
+
+  .brand-panel-logo-img {
+    height: 44px;
+    width: auto;
+    object-fit: contain;
+  }
+
+  .brand-panel-tagline {
+    font-size: var(--pb-text-3xl);
+    font-weight: var(--pb-weight-bold);
+    line-height: var(--pb-leading-tight);
+    margin-bottom: var(--pb-space-12);
+  }
+
+  .brand-features {
+    display: flex;
+    flex-direction: column;
+    gap: var(--pb-space-5);
+  }
+
+  .brand-feature {
+    display: flex;
+    align-items: center;
+    gap: var(--pb-space-3);
+    font-size: var(--pb-text-base);
+    font-weight: var(--pb-weight-medium);
+    opacity: 0.9;
+  }
+
+  .brand-feature-icon {
+    width: 24px;
+    height: 24px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: var(--pb-radius-full);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--pb-text-xs);
+    flex-shrink: 0;
+  }
+
+  /* Form panel takes remaining space */
+  .form-wrapper {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: var(--pb-space-12) var(--pb-space-8);
+    overflow-y: auto;
+  }
+
+  .form-inner {
+    width: 100%;
+    max-width: 560px;
+  }
+
+  .stepper-container {
+    padding: 0 0 var(--pb-space-8);
+  }
+
+  .stepper {
+    max-width: 480px;
+  }
+
+  .step-connector {
+    width: 56px;
+  }
+
+  .form-panel {
+    padding: 0;
+  }
+
+  .form-card {
+    padding: var(--pb-space-10) var(--pb-space-8);
+    border-radius: var(--pb-radius-xl);
+    box-shadow: var(--pb-shadow-lg);
+  }
+
+  .signup-footer {
+    padding: var(--pb-space-8) 0 0;
+  }
+}

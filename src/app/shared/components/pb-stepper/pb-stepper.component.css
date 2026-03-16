@@ -1,0 +1,143 @@
+:host {
+  display: block;
+  width: 100%;
+}
+
+.stepper__list {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  gap: 0;
+}
+
+.stepper__item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+/* ── Connector line ── */
+.stepper__connector {
+  position: absolute;
+  top: 18px;
+  right: 50%;
+  width: 100%;
+  height: 2px;
+  background-color: var(--pb-gray-200);
+  z-index: 0;
+  transition: background-color var(--pb-duration-normal) var(--pb-ease-out);
+}
+
+.stepper__connector--completed {
+  background-color: var(--pb-success-500);
+}
+
+/* ── Indicator circle ── */
+.stepper__indicator {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--pb-radius-full);
+  border: 2px solid var(--pb-gray-300);
+  background-color: var(--pb-gray-50);
+  color: var(--pb-gray-400);
+  font-family: var(--pb-font-primary);
+  font-size: var(--pb-text-sm);
+  font-weight: var(--pb-weight-semibold);
+  cursor: default;
+  padding: 0;
+  transition:
+    background-color var(--pb-duration-normal) var(--pb-ease-out),
+    border-color var(--pb-duration-normal) var(--pb-ease-out),
+    color var(--pb-duration-normal) var(--pb-ease-out),
+    box-shadow var(--pb-duration-normal) var(--pb-ease-out),
+    transform var(--pb-duration-fast) var(--pb-ease-out);
+}
+
+.stepper__indicator:focus-visible {
+  outline: 2px solid var(--pb-primary-500);
+  outline-offset: 2px;
+}
+
+/* Completed */
+.stepper__item--completed .stepper__indicator {
+  background-color: var(--pb-success-500);
+  border-color: var(--pb-success-500);
+  color: #fff;
+  cursor: pointer;
+}
+
+.stepper__item--completed .stepper__indicator:hover {
+  background-color: var(--pb-success-700);
+  border-color: var(--pb-success-700);
+  transform: translateY(-1px);
+}
+
+/* Active */
+.stepper__item--active .stepper__indicator {
+  background-color: var(--pb-primary-500);
+  border-color: var(--pb-primary-500);
+  color: #fff;
+  box-shadow: 0 0 0 4px rgba(0, 112, 224, 0.2);
+}
+
+/* ── Number / Check ── */
+.stepper__number {
+  line-height: 1;
+}
+
+.stepper__check {
+  font-size: 14px;
+  line-height: 1;
+}
+
+/* ── Label ── */
+.stepper__label {
+  margin-top: var(--pb-space-2);
+  font-family: var(--pb-font-primary);
+  font-size: var(--pb-text-xs);
+  font-weight: var(--pb-weight-medium);
+  color: var(--pb-gray-400);
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  transition: color var(--pb-duration-normal) var(--pb-ease-out);
+}
+
+.stepper__item--active .stepper__label {
+  color: var(--pb-primary-500);
+  font-weight: var(--pb-weight-semibold);
+}
+
+.stepper__item--completed .stepper__label {
+  color: var(--pb-success-700);
+}
+
+/* ── Mobile: hide labels ── */
+@media (max-width: 480px) {
+  .stepper__label {
+    display: none;
+  }
+
+  .stepper__indicator {
+    width: 32px;
+    height: 32px;
+    font-size: var(--pb-text-xs);
+  }
+
+  .stepper__connector {
+    top: 15px;
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "/api/nts": {
+    "target": "https://api.odcloud.kr",
+    "secure": true,
+    "changeOrigin": true,
+    "pathRewrite": {
+      "^/api/nts": "/api/nts-businessman/v1"
+    },
+    "logLevel": "debug"
+  },
+  "/api/nice": {
+    "target": "http://localhost:3000",
+    "secure": false,
+    "changeOrigin": true,
+    "logLevel": "debug"
+  }
+}
