@@ -5,8 +5,20 @@ import {
 } from '@angular/core';
 
 const ID_RATIO = 85.6 / 54; // ISO/IEC 7810 ID card
-const GUIDE_W = 0.85;
+const GUIDE_W = 0.82;
 const JPEG_Q = 0.85;
+
+// Detection tuning
+const DETECT_MS = 300;          // analysis interval
+const ANAL_W = 160;             // analysis canvas width (performance)
+const CONTENT_THRESH = 30;      // min std-dev to consider "has content"
+const STABLE_THRESH = 6;        // max frame-diff for "stable"
+const SHARP_THRESH = 18;        // min Laplacian variance for "sharp"
+const STABLE_FRAMES = 4;        // consecutive stable+sharp frames → auto capture (~1.2s)
+const BLUR_CHECK_THRESH = 15;   // final image sharpness threshold
+const RETRY_DELAY = 1500;       // ms to show "blurry" message before retry
+
+type DetectPhase = 'waiting' | 'detected' | 'stabilizing' | 'blurry';
 
 @Component({
   selector: 'app-id-camera-guide',
@@ -25,17 +37,44 @@ const JPEG_Q = 0.85;
                     [attr.height]="gr().h" rx="12" ry="12" fill="black"/>
             </mask>
           </defs>
-          <rect width="100%" height="100%" fill="rgba(0,0,0,.6)" mask="url(#gm)"/>
+          <rect width="100%" height="100%" fill="rgba(0,0,0,.55)" mask="url(#gm)"/>
         </svg>
-        <div class="frame" [style.left.px]="gr().x" [style.top.px]="gr().y"
+        <div class="frame" [class.frame--detected]="phase()==='detected'"
+             [class.frame--stable]="phase()==='stabilizing'"
+             [class.frame--blurry]="phase()==='blurry'"
+             [style.left.px]="gr().x" [style.top.px]="gr().y"
              [style.width.px]="gr().w" [style.height.px]="gr().h">
           <i class="c c-tl"></i><i class="c c-tr"></i>
           <i class="c c-bl"></i><i class="c c-br"></i>
+          @if (phase() === 'stabilizing') {
+            <div class="progress-ring">
+              <svg viewBox="0 0 44 44">
+                <circle cx="22" cy="22" r="18" fill="none" stroke="rgba(255,255,255,.3)" stroke-width="3"/>
+                <circle cx="22" cy="22" r="18" fill="none" stroke="#4ade80" stroke-width="3"
+                  stroke-linecap="round"
+                  [style.stroke-dasharray]="'113'"
+                  [style.stroke-dashoffset]="113 - 113 * stableProgress()"
+                  style="transition:stroke-dashoffset .3s ease; transform:rotate(-90deg); transform-origin:center;"/>
+              </svg>
+            </div>
+          }
         </div>
-        <p class="txt txt-t" [style.bottom]="'calc(50% + '+(gr().h/2+20)+'px)'">
-          신분증을 프레임 안에 맞춰주세요</p>
+
+        <!-- Status text -->
+        <p class="txt txt-t" [style.bottom]="'calc(50% + '+(gr().h/2+20)+'px)'"
+           [class.txt--detected]="phase()==='detected'"
+           [class.txt--stable]="phase()==='stabilizing'"
+           [class.txt--blurry]="phase()==='blurry'">
+          @switch (phase()) {
+            @case ('waiting') { 신분증을 프레임 안에 맞춰주세요 }
+            @case ('detected') { 움직이지 마세요... }
+            @case ('stabilizing') { 자동 촬영 중... }
+            @case ('blurry') { 선명하지 않습니다. 다시 촬영합니다. }
+          }
+        </p>
         <p class="txt txt-b" [style.top]="'calc(50% + '+(gr().h/2+12)+'px)'">
           주민등록증, 운전면허증, 여권</p>
+
         <div class="top-bar">
           @if (flashOk()) {
             <button type="button" class="cb" (click)="toggleFlash()"
@@ -48,9 +87,10 @@ const JPEG_Q = 0.85;
         </div>
         <div class="bot-bar">
           <button type="button" class="cap" [disabled]="!ready()||capturing()"
-                  (click)="capture()" aria-label="촬영">
+                  (click)="capture()" aria-label="수동 촬영">
             <span class="cap-r"></span><span class="cap-i"></span>
           </button>
+          <p class="auto-hint">자동 촬영 활성화됨</p>
         </div>
         @if (err()) {
           <div class="err-ov">
@@ -60,6 +100,7 @@ const JPEG_Q = 0.85;
           </div>
         }
         <canvas #canvasEl style="position:absolute;visibility:hidden;top:-9999px"></canvas>
+        <canvas #analEl style="position:absolute;visibility:hidden;top:-9999px"></canvas>
       </div>
     }
   `,
@@ -74,9 +115,21 @@ const JPEG_Q = 0.85;
       object-fit:cover; opacity:0; transition:opacity .3s ease-out; }
     .svg { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; }
     .frame { position:absolute; border:2px solid rgba(255,255,255,.5);
-      border-radius:12px; pointer-events:none; }
+      border-radius:12px; pointer-events:none;
+      transition:border-color .3s ease, box-shadow .3s ease; }
+    .frame--detected { border-color:rgba(250,204,21,.8);
+      box-shadow:0 0 0 2px rgba(250,204,21,.2); }
+    .frame--stable { border-color:rgba(74,222,128,.9);
+      box-shadow:0 0 0 3px rgba(74,222,128,.25); }
+    .frame--blurry { border-color:rgba(248,113,113,.8);
+      box-shadow:0 0 0 2px rgba(248,113,113,.2); }
     .c { position:absolute; width:24px; height:24px; pointer-events:none; display:block; }
-    .c::before,.c::after { content:''; position:absolute; background:#fff; border-radius:2px; }
+    .c::before,.c::after { content:''; position:absolute; border-radius:2px;
+      transition:background .3s ease; }
+    .frame .c::before,.frame .c::after { background:#fff; }
+    .frame--detected .c::before,.frame--detected .c::after { background:#facc15; }
+    .frame--stable .c::before,.frame--stable .c::after { background:#4ade80; }
+    .frame--blurry .c::before,.frame--blurry .c::after { background:#f87171; }
     .c-tl { top:-2px; left:-2px; }
     .c-tl::before { top:0;left:0;width:24px;height:3px; }
     .c-tl::after  { top:0;left:0;width:3px;height:24px; }
@@ -91,8 +144,12 @@ const JPEG_Q = 0.85;
     .c-br::after  { bottom:0;right:0;width:3px;height:24px; }
     .txt { position:absolute; left:0; right:0; text-align:center; color:#fff;
       font-family:var(--pb-font-primary,sans-serif); pointer-events:none;
-      margin:0; text-shadow:0 1px 4px rgba(0,0,0,.6); }
+      margin:0; text-shadow:0 1px 4px rgba(0,0,0,.6);
+      transition:color .3s ease; }
     .txt-t { font-size:var(--pb-text-base,1rem); font-weight:var(--pb-weight-semibold,600); }
+    .txt--detected { color:#facc15; }
+    .txt--stable { color:#4ade80; }
+    .txt--blurry { color:#f87171; }
     .txt-b { font-size:var(--pb-text-sm,.875rem); color:rgba(255,255,255,.7); }
     .top-bar { position:absolute; top:0; left:0; right:0; display:flex;
       justify-content:space-between; align-items:center;
@@ -105,8 +162,8 @@ const JPEG_Q = 0.85;
     .cb .material-symbols-rounded { font-size:24px; }
     .cb-sp { width:44px; height:44px; }
     .bot-bar { position:absolute; bottom:0; left:0; right:0; display:flex;
-      justify-content:center; padding:24px 16px calc(env(safe-area-inset-bottom,16px)+24px);
-      z-index:10; }
+      flex-direction:column; align-items:center; gap:8px;
+      padding:24px 16px calc(env(safe-area-inset-bottom,16px)+24px); z-index:10; }
     .cap { position:relative; width:72px; height:72px; background:transparent;
       border:none; cursor:pointer; -webkit-tap-highlight-color:transparent; padding:0; }
     .cap:disabled { opacity:.4; cursor:not-allowed; }
@@ -116,6 +173,10 @@ const JPEG_Q = 0.85;
     .cap-i { position:absolute; inset:6px; background:#fff; border-radius:50%;
       transition:transform .15s ease-out, background .15s ease-out; }
     .cap:active:not(:disabled) .cap-i { transform:scale(.9); background:var(--pb-gray-200,#e5e7eb); }
+    .auto-hint { margin:0; font-size:var(--pb-text-xs,.75rem); color:rgba(255,255,255,.5);
+      font-family:var(--pb-font-primary,sans-serif); }
+    .progress-ring { position:absolute; top:50%; left:50%;
+      transform:translate(-50%,-50%); width:44px; height:44px; pointer-events:none; }
     .err-ov { position:absolute; inset:0; display:flex; flex-direction:column;
       align-items:center; justify-content:center; gap:var(--pb-space-4,1rem);
       z-index:20; padding:var(--pb-space-6,1.5rem); }
@@ -139,12 +200,15 @@ export class IdCameraGuideComponent implements OnChanges, OnDestroy {
 
   readonly videoEl = viewChild<ElementRef<HTMLVideoElement>>('videoEl');
   readonly canvasEl = viewChild<ElementRef<HTMLCanvasElement>>('canvasEl');
+  readonly analEl = viewChild<ElementRef<HTMLCanvasElement>>('analEl');
 
   readonly ready = signal(false);
   readonly capturing = signal(false);
   readonly err = signal<string | null>(null);
   readonly flashOn = signal(false);
   readonly flashOk = signal(false);
+  readonly phase = signal<DetectPhase>('waiting');
+  readonly stableProgress = signal(0);
   private readonly vp = signal({ w: window.innerWidth, h: window.innerHeight });
 
   readonly gr = computed(() => {
@@ -157,6 +221,13 @@ export class IdCameraGuideComponent implements OnChanges, OnDestroy {
   private stream: MediaStream | null = null;
   private track: MediaStreamTrack | null = null;
   private onResizeBound = this.onResize.bind(this);
+
+  // Detection state
+  private detectRafId = 0;
+  private lastDetectTime = 0;
+  private prevGray: Uint8ClampedArray | null = null;
+  private stableCount = 0;
+  private retryTimer = 0;
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['isOpen']) {
@@ -179,10 +250,12 @@ export class IdCameraGuideComponent implements OnChanges, OnDestroy {
     } catch { /* torch unsupported */ }
   }
 
+  /** Manual capture (button press) — skips auto-detection */
   async capture(): Promise<void> {
     const video = this.videoEl()?.nativeElement;
     const canvas = this.canvasEl()?.nativeElement;
     if (!video || !canvas || !this.ready()) return;
+    this.stopDetection();
     this.capturing.set(true);
     try {
       const file = await this.cropGuideArea(video, canvas);
@@ -195,21 +268,27 @@ export class IdCameraGuideComponent implements OnChanges, OnDestroy {
     }
   }
 
+  // ─── Camera lifecycle ───────────────────────────────────
+
   private async open(): Promise<void> {
     this.err.set(null);
     this.ready.set(false);
     this.flashOn.set(false);
     this.flashOk.set(false);
+    this.phase.set('waiting');
+    this.stableProgress.set(0);
+    this.stableCount = 0;
+    this.prevGray = null;
     window.addEventListener('resize', this.onResizeBound);
     this.onResize();
 
     try {
       this.stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment' },
+        video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } },
       });
       this.track = this.stream.getVideoTracks()[0];
       this.detectFlash();
-      await Promise.resolve(); // let Angular render <video>
+      await Promise.resolve();
 
       const video = this.videoEl()?.nativeElement;
       if (!video) return;
@@ -220,10 +299,244 @@ export class IdCameraGuideComponent implements OnChanges, OnDestroy {
       });
       await video.play();
       this.ready.set(true);
+      this.startDetection();
     } catch (e) {
       this.err.set(this.permMsg(e));
     }
   }
+
+  private stopCamera(): void {
+    this.stopDetection();
+    clearTimeout(this.retryTimer);
+    window.removeEventListener('resize', this.onResizeBound);
+    if (this.stream) {
+      for (const t of this.stream.getTracks()) t.stop();
+      this.stream = null; this.track = null;
+    }
+    const v = this.videoEl()?.nativeElement;
+    if (v) v.srcObject = null;
+    this.ready.set(false); this.flashOn.set(false); this.flashOk.set(false);
+    this.phase.set('waiting'); this.stableProgress.set(0);
+  }
+
+  // ─── Auto-detection loop ────────────────────────────────
+
+  private startDetection(): void {
+    this.lastDetectTime = 0;
+    this.stableCount = 0;
+    this.prevGray = null;
+    this.phase.set('waiting');
+    this.stableProgress.set(0);
+    const loop = (ts: number) => {
+      this.detectRafId = requestAnimationFrame(loop);
+      if (ts - this.lastDetectTime < DETECT_MS) return;
+      this.lastDetectTime = ts;
+      this.analyzeFrame();
+    };
+    this.detectRafId = requestAnimationFrame(loop);
+  }
+
+  private stopDetection(): void {
+    if (this.detectRafId) {
+      cancelAnimationFrame(this.detectRafId);
+      this.detectRafId = 0;
+    }
+  }
+
+  private analyzeFrame(): void {
+    if (this.capturing() || this.phase() === 'blurry') return;
+    const video = this.videoEl()?.nativeElement;
+    const anal = this.analEl()?.nativeElement;
+    if (!video || !anal || video.readyState < 2) return;
+
+    // Map guide rect to video coordinates
+    const guide = this.gr();
+    const dw = video.clientWidth, dh = video.clientHeight;
+    const vw = video.videoWidth, vh = video.videoHeight;
+    const va = vw / vh, da = dw / dh;
+    let sx: number, sy: number, ox: number, oy: number;
+    if (va > da) {
+      sy = vh / dh; sx = sy; ox = (vw - dw * sx) / 2; oy = 0;
+    } else {
+      sx = vw / dw; sy = sx; ox = 0; oy = (vh - dh * sy) / 2;
+    }
+    const gx = Math.max(0, Math.round(guide.x * sx + ox));
+    const gy = Math.max(0, Math.round(guide.y * sy + oy));
+    const gw = Math.min(Math.round(guide.w * sx), vw - gx);
+    const gh = Math.min(Math.round(guide.h * sy), vh - gy);
+
+    // Draw guide area onto small analysis canvas
+    const aw = ANAL_W;
+    const ah = Math.round(aw / ID_RATIO);
+    anal.width = aw;
+    anal.height = ah;
+    const ctx = anal.getContext('2d', { willReadFrequently: true });
+    if (!ctx) return;
+    ctx.drawImage(video, gx, gy, gw, gh, 0, 0, aw, ah);
+    const imgData = ctx.getImageData(0, 0, aw, ah);
+
+    // Convert to grayscale
+    const gray = this.toGrayscale(imgData);
+
+    // 1. Content check: standard deviation
+    const contentStd = this.stdDev(gray);
+    const hasContent = contentStd > CONTENT_THRESH;
+
+    // 2. Stability check: frame difference
+    let isStable = false;
+    if (this.prevGray && this.prevGray.length === gray.length) {
+      const diff = this.frameDiff(gray, this.prevGray);
+      isStable = diff < STABLE_THRESH;
+    }
+    this.prevGray = gray;
+
+    // 3. Sharpness check: Laplacian variance
+    const sharpness = this.laplacianVariance(gray, aw, ah);
+    const isSharp = sharpness > SHARP_THRESH;
+
+    // State machine
+    if (!hasContent) {
+      this.stableCount = 0;
+      this.phase.set('waiting');
+      this.stableProgress.set(0);
+    } else if (!isStable || !isSharp) {
+      this.stableCount = 0;
+      this.phase.set('detected');
+      this.stableProgress.set(0);
+    } else {
+      // Content + stable + sharp
+      this.stableCount++;
+      this.phase.set(this.stableCount >= 2 ? 'stabilizing' : 'detected');
+      this.stableProgress.set(Math.min(1, this.stableCount / STABLE_FRAMES));
+
+      if (this.stableCount >= STABLE_FRAMES) {
+        this.autoCapture();
+      }
+    }
+  }
+
+  private async autoCapture(): Promise<void> {
+    this.stopDetection();
+    this.capturing.set(true);
+    const video = this.videoEl()?.nativeElement;
+    const canvas = this.canvasEl()?.nativeElement;
+    if (!video || !canvas) {
+      this.capturing.set(false);
+      return;
+    }
+
+    try {
+      const file = await this.cropGuideArea(video, canvas);
+
+      // Check final image sharpness
+      const sharp = await this.checkFinalSharpness(file);
+      if (!sharp) {
+        this.capturing.set(false);
+        this.phase.set('blurry');
+        this.stableProgress.set(0);
+        this.retryTimer = window.setTimeout(() => {
+          this.phase.set('waiting');
+          this.stableCount = 0;
+          this.prevGray = null;
+          this.startDetection();
+        }, RETRY_DELAY);
+        return;
+      }
+
+      this.stopCamera();
+      this.captured.emit(file);
+    } catch {
+      this.err.set('촬영에 실패했습니다. 다시 시도해 주세요.');
+    } finally {
+      this.capturing.set(false);
+    }
+  }
+
+  // ─── Image analysis helpers ─────────────────────────────
+
+  private toGrayscale(imgData: ImageData): Uint8ClampedArray {
+    const d = imgData.data;
+    const out = new Uint8ClampedArray(d.length / 4);
+    for (let i = 0; i < out.length; i++) {
+      const j = i * 4;
+      out[i] = (d[j] * 77 + d[j + 1] * 150 + d[j + 2] * 29) >> 8; // fast luminance
+    }
+    return out;
+  }
+
+  private stdDev(gray: Uint8ClampedArray): number {
+    const n = gray.length;
+    if (n === 0) return 0;
+    let sum = 0;
+    for (let i = 0; i < n; i++) sum += gray[i];
+    const mean = sum / n;
+    let sq = 0;
+    for (let i = 0; i < n; i++) {
+      const d = gray[i] - mean;
+      sq += d * d;
+    }
+    return Math.sqrt(sq / n);
+  }
+
+  private frameDiff(a: Uint8ClampedArray, b: Uint8ClampedArray): number {
+    let sum = 0;
+    for (let i = 0; i < a.length; i++) {
+      sum += Math.abs(a[i] - b[i]);
+    }
+    return sum / a.length;
+  }
+
+  /** Laplacian variance — higher = sharper */
+  private laplacianVariance(gray: Uint8ClampedArray, w: number, h: number): number {
+    // 3x3 Laplacian kernel: [0,-1,0,-1,4,-1,0,-1,0]
+    const out: number[] = [];
+    for (let y = 1; y < h - 1; y++) {
+      for (let x = 1; x < w - 1; x++) {
+        const idx = y * w + x;
+        const lap =
+          4 * gray[idx]
+          - gray[idx - 1] - gray[idx + 1]
+          - gray[idx - w] - gray[idx + w];
+        out.push(lap);
+      }
+    }
+    if (out.length === 0) return 0;
+    let sum = 0;
+    for (const v of out) sum += v;
+    const mean = sum / out.length;
+    let sq = 0;
+    for (const v of out) {
+      const d = v - mean;
+      sq += d * d;
+    }
+    return Math.sqrt(sq / out.length);
+  }
+
+  /** Check sharpness of the final captured JPEG */
+  private async checkFinalSharpness(file: File): Promise<boolean> {
+    return new Promise<boolean>((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const c = document.createElement('canvas');
+        const aw = ANAL_W;
+        const ah = Math.round(aw / ID_RATIO);
+        c.width = aw;
+        c.height = ah;
+        const ctx = c.getContext('2d', { willReadFrequently: true });
+        if (!ctx) { resolve(true); return; }
+        ctx.drawImage(img, 0, 0, aw, ah);
+        const imgData = ctx.getImageData(0, 0, aw, ah);
+        const gray = this.toGrayscale(imgData);
+        const sharpness = this.laplacianVariance(gray, aw, ah);
+        URL.revokeObjectURL(img.src);
+        resolve(sharpness >= BLUR_CHECK_THRESH);
+      };
+      img.onerror = () => resolve(true); // on error, allow it through
+      img.src = URL.createObjectURL(file);
+    });
+  }
+
+  // ─── Crop & utility ─────────────────────────────────────
 
   private async cropGuideArea(video: HTMLVideoElement, canvas: HTMLCanvasElement): Promise<File> {
     const vw = video.videoWidth, vh = video.videoHeight;
@@ -277,17 +590,6 @@ export class IdCameraGuideComponent implements OnChanges, OnDestroy {
       }
     }
     return '카메라 접근 권한이 필요합니다';
-  }
-
-  private stopCamera(): void {
-    window.removeEventListener('resize', this.onResizeBound);
-    if (this.stream) {
-      for (const t of this.stream.getTracks()) t.stop();
-      this.stream = null; this.track = null;
-    }
-    const v = this.videoEl()?.nativeElement;
-    if (v) v.srcObject = null;
-    this.ready.set(false); this.flashOn.set(false); this.flashOk.set(false);
   }
 
   private onResize(): void {
