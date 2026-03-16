@@ -11,14 +11,14 @@ const JPEG_Q = 0.85;
 // Detection tuning
 const DETECT_MS = 250;          // analysis interval
 const ANAL_W = 120;             // analysis canvas width (performance)
-const CONTENT_THRESH = 15;      // min std-dev to consider "has content"
-const STABLE_THRESH = 12;       // max frame-diff for "stable"
-const SHARP_THRESH = 8;         // min Laplacian variance for "sharp"
-const STABLE_FRAMES = 4;        // consecutive stable+sharp frames → auto capture (~1s)
-const BLUR_CHECK_THRESH = 6;    // final image sharpness threshold
+const CONTENT_THRESH = 12;      // min std-dev to consider "has content"
+const STABLE_THRESH = 15;       // max frame-diff for "stable" (generous)
+const SHARP_THRESH = 5;         // min Laplacian variance for "sharp" (lenient)
+const STABLE_FRAMES = 3;        // consecutive stable+sharp frames → auto capture (~0.75s)
+const BLUR_CHECK_THRESH = 4;    // final image sharpness threshold
 const RETRY_DELAY = 1500;       // ms to show "blurry" message before retry
-const BORDER_RATIO = 0.10;      // border strip = 10% of each edge
-const BORDER_EDGE_THRESH = 12;  // if border edge density > this, card is too close
+const BORDER_RATIO = 0.08;      // border strip = 8% of each edge
+const CLOSE_RATIO_THRESH = 0.7; // border_edge / center_edge > 70% → too close
 
 type DetectPhase = 'waiting' | 'too_close' | 'detected' | 'stabilizing' | 'blurry';
 
@@ -527,30 +527,35 @@ export class IdCameraGuideComponent implements OnChanges, OnDestroy {
 
   /**
    * Check if card edges are too close to the guide frame border.
-   * Measures edge density (gradient magnitude) in the border strips.
-   * High edge density in borders = card is filling the frame = too close.
+   * Compares edge density in the border strips vs the center area.
+   * If border edge density is ≥ 70% of center → card fills the frame → too close.
    */
   private checkBorderEdges(gray: Uint8ClampedArray, w: number, h: number): boolean {
     const bx = Math.max(2, Math.round(w * BORDER_RATIO));
     const by = Math.max(2, Math.round(h * BORDER_RATIO));
-    let edgeSum = 0;
-    let edgeCount = 0;
+    let borderSum = 0, borderN = 0;
+    let centerSum = 0, centerN = 0;
 
-    // Scan 4 border strips using horizontal gradient |g[x+1] - g[x-1]|
     for (let y = 1; y < h - 1; y++) {
       for (let x = 1; x < w - 1; x++) {
-        const inBorder =
-          y < by || y >= h - by || x < bx || x >= w - bx;
-        if (!inBorder) continue;
         const idx = y * w + x;
-        const gx = Math.abs(gray[idx + 1] - gray[idx - 1]);
-        const gy = Math.abs(gray[idx + w] - gray[idx - w]);
-        edgeSum += gx + gy;
-        edgeCount++;
+        const grad = Math.abs(gray[idx + 1] - gray[idx - 1])
+                   + Math.abs(gray[idx + w] - gray[idx - w]);
+        const inBorder = y < by || y >= h - by || x < bx || x >= w - bx;
+        if (inBorder) {
+          borderSum += grad; borderN++;
+        } else {
+          centerSum += grad; centerN++;
+        }
       }
     }
-    if (edgeCount === 0) return false;
-    return (edgeSum / edgeCount) > BORDER_EDGE_THRESH;
+    if (centerN === 0 || borderN === 0) return false;
+    const borderAvg = borderSum / borderN;
+    const centerAvg = centerSum / centerN;
+    // Only flag "too close" if center actually has meaningful edges
+    // AND border edge density is high relative to center
+    if (centerAvg < 3) return false;
+    return (borderAvg / centerAvg) > CLOSE_RATIO_THRESH;
   }
 
   /** Laplacian variance — higher = sharper */
