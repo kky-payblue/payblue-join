@@ -5,3 +5,4 @@ export { PbCardComponent } from './pb-card/pb-card.component';
 export { PbPasswordStrengthComponent } from './pb-password-strength/pb-password-strength.component';
 export { PbFileUploadComponent } from './pb-file-upload/pb-file-upload.component';
 export { PbTrustBadgeComponent } from './pb-trust-badge/pb-trust-badge.component';
+export { IdCameraGuideComponent } from './id-camera-guide/id-camera-guide.component';

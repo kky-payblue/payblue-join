@@ -7,11 +7,12 @@ import { SignupService } from '../../../shared/services/signup.service';
 import { ValidationService } from '../../../shared/services/validation.service';
 import { DaumPostcodeService } from '../../../shared/services/daum-postcode.service';
 import { BusinessVerificationService } from '../../../shared/services/business-verification.service';
+import { IdCameraGuideComponent } from '../../../shared/components/id-camera-guide/id-camera-guide.component';
 
 @Component({
   selector: 'app-step2-business',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, IdCameraGuideComponent],
   template: `
     <div class="step-container">
       <div class="step-header">
@@ -281,6 +282,17 @@ import { BusinessVerificationService } from '../../../shared/services/business-v
           </div>
         }
 
+        <app-id-camera-guide
+          [isOpen]="docCameraOpen()"
+          (captured)="onDocCameraCapture($event)"
+          (closed)="docCameraOpen.set(false)"
+        />
+        <app-id-camera-guide
+          [isOpen]="idCameraOpen()"
+          (captured)="onIdCameraCapture($event)"
+          (closed)="idCameraOpen.set(false)"
+        />
+
         <!-- 사업자등록증 + 신분증 촬영 -->
         <div class="upload-row">
         <div class="form-field">
@@ -300,7 +312,7 @@ import { BusinessVerificationService } from '../../../shared/services/business-v
                 <p class="upload-placeholder-text">사업자등록증을<br/>등록해 주세요</p>
               </div>
               <div class="upload-actions">
-                <button type="button" class="upload-action-btn upload-action-camera" (click)="docCameraInput.click()">
+                <button type="button" class="upload-action-btn upload-action-camera" (click)="openDocCameraGuide()">
                   <span class="material-symbols-rounded">photo_camera</span>
                   촬영
                 </button>
@@ -350,7 +362,7 @@ import { BusinessVerificationService } from '../../../shared/services/business-v
                 <p class="upload-placeholder-text">신분증을<br/>등록해 주세요</p>
               </div>
               <div class="upload-actions">
-                <button type="button" class="upload-action-btn upload-action-camera" (click)="idCameraInput.click()">
+                <button type="button" class="upload-action-btn upload-action-camera" (click)="openIdCameraGuide()">
                   <span class="material-symbols-rounded">photo_camera</span>
                   촬영
                 </button>
@@ -574,6 +586,8 @@ export class Step2BusinessComponent implements OnInit, OnDestroy {
   readonly docThumbnailUrl = signal<string | null>(null);
   readonly docFileRequired = signal(false);
 
+  readonly docCameraOpen = signal(false);
+  readonly idCameraOpen = signal(false);
   readonly isIdDragOver = signal(false);
   readonly idFileName = signal<string | null>(null);
   readonly idFileSize = signal('');
@@ -738,6 +752,24 @@ export class Step2BusinessComponent implements OnInit, OnDestroy {
     const file = input.files?.[0];
     if (file) this.setIdFile(file);
     input.value = '';
+  }
+
+  openDocCameraGuide(): void {
+    this.docCameraOpen.set(true);
+  }
+
+  onDocCameraCapture(file: File): void {
+    this.docCameraOpen.set(false);
+    this.setFile(file);
+  }
+
+  openIdCameraGuide(): void {
+    this.idCameraOpen.set(true);
+  }
+
+  onIdCameraCapture(file: File): void {
+    this.idCameraOpen.set(false);
+    this.setIdFile(file);
   }
 
   removeIdFile(event: Event): void {

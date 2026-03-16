@@ -6,11 +6,12 @@ import { Subject, takeUntil } from 'rxjs';
 import { SignupService } from '../../../shared/services/signup.service';
 import { DaumPostcodeService } from '../../../shared/services/daum-postcode.service';
 import { IdOcrService } from '../../../shared/services/id-ocr.service';
+import { IdCameraGuideComponent } from '../../../shared/components/id-camera-guide/id-camera-guide.component';
 
 @Component({
   selector: 'app-step2-individual',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, IdCameraGuideComponent],
   template: `
     <div class="step-container">
       <div class="step-header">
@@ -200,6 +201,12 @@ import { IdOcrService } from '../../../shared/services/id-ocr.service';
         </div>
       </form>
 
+      <app-id-camera-guide
+        [isOpen]="cameraOpen()"
+        (captured)="onCameraCapture($event)"
+        (closed)="cameraOpen.set(false)"
+      />
+
       <!-- 신분증 업로드 (재사용 템플릿) -->
       <ng-template #idUploadTpl>
         <div class="form-field">
@@ -235,7 +242,7 @@ import { IdOcrService } from '../../../shared/services/id-ocr.service';
                 <p class="upload-placeholder-sub">주민등록증, 운전면허증, 여권</p>
               </div>
               <div class="upload-actions">
-                <button type="button" class="upload-action-btn upload-action-camera" (click)="cameraInput.click()">
+                <button type="button" class="upload-action-btn upload-action-camera" (click)="openCameraGuide()">
                   <span class="material-symbols-rounded">photo_camera</span>
                   촬영
                 </button>
@@ -647,6 +654,7 @@ export class Step2IndividualComponent implements OnInit, OnDestroy {
   readonly rrnFocused = signal(false);
   readonly niceAutoFilled = signal(false);
   readonly ocrAutoFilled = signal(false);
+  readonly cameraOpen = signal(false);
   readonly rrnAutoFilled = computed(() => this.niceAutoFilled() || this.ocrAutoFilled());
   readonly ocrProcessing = this.idOcrService.processing;
   readonly ocrProgress = this.idOcrService.progress;
@@ -722,6 +730,15 @@ export class Step2IndividualComponent implements OnInit, OnDestroy {
     const file = input.files?.[0];
     if (file) this.setFile(file);
     input.value = '';
+  }
+
+  openCameraGuide(): void {
+    this.cameraOpen.set(true);
+  }
+
+  onCameraCapture(file: File): void {
+    this.cameraOpen.set(false);
+    this.setFile(file);
   }
 
   removeFile(event: Event): void {
