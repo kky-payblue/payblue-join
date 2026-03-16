@@ -1,7 +1,7 @@
 import {
   Component, Input, Output, EventEmitter, signal, computed,
   OnChanges, OnDestroy, SimpleChanges, ElementRef, viewChild,
-  ChangeDetectionStrategy,
+  ChangeDetectionStrategy, inject, ChangeDetectorRef, NgZone,
 } from '@angular/core';
 
 const ID_RATIO = 85.6 / 54; // ISO/IEC 7810 ID card
@@ -9,13 +9,13 @@ const GUIDE_W = 0.82;
 const JPEG_Q = 0.85;
 
 // Detection tuning
-const DETECT_MS = 300;          // analysis interval
-const ANAL_W = 160;             // analysis canvas width (performance)
-const CONTENT_THRESH = 30;      // min std-dev to consider "has content"
-const STABLE_THRESH = 6;        // max frame-diff for "stable"
-const SHARP_THRESH = 18;        // min Laplacian variance for "sharp"
-const STABLE_FRAMES = 4;        // consecutive stable+sharp frames → auto capture (~1.2s)
-const BLUR_CHECK_THRESH = 15;   // final image sharpness threshold
+const DETECT_MS = 250;          // analysis interval
+const ANAL_W = 120;             // analysis canvas width (performance)
+const CONTENT_THRESH = 15;      // min std-dev to consider "has content"
+const STABLE_THRESH = 12;       // max frame-diff for "stable"
+const SHARP_THRESH = 8;         // min Laplacian variance for "sharp"
+const STABLE_FRAMES = 4;        // consecutive stable+sharp frames → auto capture (~1s)
+const BLUR_CHECK_THRESH = 6;    // final image sharpness threshold
 const RETRY_DELAY = 1500;       // ms to show "blurry" message before retry
 
 type DetectPhase = 'waiting' | 'detected' | 'stabilizing' | 'blurry';
@@ -194,6 +194,9 @@ type DetectPhase = 'waiting' | 'detected' | 'stabilizing' | 'blurry';
   `],
 })
 export class IdCameraGuideComponent implements OnChanges, OnDestroy {
+  private readonly cdr = inject(ChangeDetectorRef);
+  private readonly zone = inject(NgZone);
+
   @Input() isOpen = false;
   @Output() captured = new EventEmitter<File>();
   @Output() closed = new EventEmitter<void>();
@@ -327,13 +330,16 @@ export class IdCameraGuideComponent implements OnChanges, OnDestroy {
     this.prevGray = null;
     this.phase.set('waiting');
     this.stableProgress.set(0);
-    const loop = (ts: number) => {
+    // Run rAF outside zone for performance, then enter zone only for UI updates
+    this.zone.runOutsideAngular(() => {
+      const loop = (ts: number) => {
+        this.detectRafId = requestAnimationFrame(loop);
+        if (ts - this.lastDetectTime < DETECT_MS) return;
+        this.lastDetectTime = ts;
+        this.analyzeFrame();
+      };
       this.detectRafId = requestAnimationFrame(loop);
-      if (ts - this.lastDetectTime < DETECT_MS) return;
-      this.lastDetectTime = ts;
-      this.analyzeFrame();
-    };
-    this.detectRafId = requestAnimationFrame(loop);
+    });
   }
 
   private stopDetection(): void {
@@ -394,24 +400,34 @@ export class IdCameraGuideComponent implements OnChanges, OnDestroy {
     const sharpness = this.laplacianVariance(gray, aw, ah);
     const isSharp = sharpness > SHARP_THRESH;
 
-    // State machine
+    // State machine — update signals inside zone for change detection
+    const prevPhase = this.phase();
+    let newPhase: DetectPhase;
+    let newProgress = 0;
+
     if (!hasContent) {
       this.stableCount = 0;
-      this.phase.set('waiting');
-      this.stableProgress.set(0);
+      newPhase = 'waiting';
     } else if (!isStable || !isSharp) {
       this.stableCount = 0;
-      this.phase.set('detected');
-      this.stableProgress.set(0);
+      newPhase = 'detected';
     } else {
-      // Content + stable + sharp
       this.stableCount++;
-      this.phase.set(this.stableCount >= 2 ? 'stabilizing' : 'detected');
-      this.stableProgress.set(Math.min(1, this.stableCount / STABLE_FRAMES));
+      newPhase = this.stableCount >= 2 ? 'stabilizing' : 'detected';
+      newProgress = Math.min(1, this.stableCount / STABLE_FRAMES);
+    }
 
-      if (this.stableCount >= STABLE_FRAMES) {
-        this.autoCapture();
-      }
+    // Only enter zone when something changed
+    if (newPhase !== prevPhase || newProgress !== this.stableProgress()) {
+      this.zone.run(() => {
+        this.phase.set(newPhase);
+        this.stableProgress.set(newProgress);
+        this.cdr.markForCheck();
+      });
+    }
+
+    if (this.stableCount >= STABLE_FRAMES) {
+      this.zone.run(() => this.autoCapture());
     }
   }
 
@@ -434,10 +450,12 @@ export class IdCameraGuideComponent implements OnChanges, OnDestroy {
         this.capturing.set(false);
         this.phase.set('blurry');
         this.stableProgress.set(0);
+        this.cdr.markForCheck();
         this.retryTimer = window.setTimeout(() => {
           this.phase.set('waiting');
           this.stableCount = 0;
           this.prevGray = null;
+          this.cdr.markForCheck();
           this.startDetection();
         }, RETRY_DELAY);
         return;
