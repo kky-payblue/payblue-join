@@ -252,19 +252,21 @@ import { IdCameraGuideComponent } from '../../../shared/components/id-camera-gui
                 </button>
               </div>
             } @else {
-              <div class="file-preview">
+              <div class="file-preview-full">
                 @if (thumbnailUrl()) {
-                  <img class="file-thumbnail" [src]="thumbnailUrl()" alt="신분증 미리보기" />
+                  <img class="preview-img" [src]="thumbnailUrl()" alt="신분증 미리보기" />
                 } @else {
-                  <span class="material-symbols-rounded file-icon">description</span>
+                  <div class="preview-file-icon">
+                    <span class="material-symbols-rounded">description</span>
+                    <span class="preview-file-name">{{ selectedFileName() }}</span>
+                  </div>
                 }
-                <div class="file-info">
-                  <span class="file-name">{{ selectedFileName() }}</span>
-                  <span class="file-size">{{ fileSize() }}</span>
-                </div>
-                <button type="button" class="file-remove" (click)="removeFile($event)">
-                  <span class="material-symbols-rounded">close</span>
-                </button>
+                @if (!rrnAutoFilled()) {
+                  <button type="button" class="retake-btn" (click)="retakePhoto()">
+                    <span class="material-symbols-rounded">photo_camera</span>
+                    재촬영
+                  </button>
+                }
               </div>
             }
           </div>
@@ -510,7 +512,8 @@ import { IdCameraGuideComponent } from '../../../shared/components/id-camera-gui
       border-style: solid;
       border-color: var(--pb-success-400);
       background: var(--pb-success-50);
-      padding: var(--pb-space-4) var(--pb-space-6);
+      padding: 0;
+      overflow: hidden;
     }
     .file-upload-zone.error { border-color: var(--pb-error-500); background: var(--pb-error-50); }
     .upload-placeholder { display: flex; flex-direction: column; align-items: center; gap: var(--pb-space-2); }
@@ -560,49 +563,29 @@ import { IdCameraGuideComponent } from '../../../shared/components/id-camera-gui
     .upload-action-camera:hover { background: var(--pb-primary-100); }
     @media (min-width: 641px) { .upload-action-camera { display: none; } .upload-actions { justify-content: center; } }
     @media (max-width: 640px) { .upload-action-file { display: none; } .upload-actions { max-width: 100%; } }
-    .file-preview {
-      display: flex;
-      align-items: center;
-      gap: var(--pb-space-3);
-      text-align: left;
+    .file-preview-full { position: relative; width: 100%; }
+    .preview-img { width: 100%; display: block; border-radius: calc(var(--pb-radius-lg) - 2px); }
+    .preview-file-icon {
+      display: flex; flex-direction: column; align-items: center; gap: var(--pb-space-2);
+      padding: var(--pb-space-6) var(--pb-space-4);
     }
-    .file-thumbnail {
-      width: 56px;
-      height: 56px;
-      object-fit: cover;
-      border-radius: var(--pb-radius-md);
-      border: 1px solid var(--pb-gray-200);
+    .preview-file-icon .material-symbols-rounded { font-size: 2.5rem; color: var(--pb-success-500); }
+    .preview-file-name {
+      font-size: var(--pb-text-xs); color: var(--pb-gray-600);
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 200px;
     }
-    .file-icon { font-size: 2rem; color: var(--pb-success-500); }
-    .file-info {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
-      overflow: hidden;
+    .retake-btn {
+      position: absolute; bottom: var(--pb-space-3); right: var(--pb-space-3);
+      display: flex; align-items: center; gap: var(--pb-space-1);
+      padding: var(--pb-space-2) var(--pb-space-3);
+      background: rgba(0,0,0,.6); color: #fff; border: none;
+      border-radius: var(--pb-radius-md); font-size: var(--pb-text-sm);
+      font-weight: var(--pb-weight-semibold); font-family: var(--pb-font-primary);
+      cursor: pointer; backdrop-filter: blur(4px);
+      transition: background .15s ease-out;
     }
-    .file-name {
-      font-size: var(--pb-text-sm);
-      font-weight: var(--pb-weight-medium);
-      color: var(--pb-gray-700);
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-    .file-size {
-      font-size: var(--pb-text-xs);
-      color: var(--pb-gray-500);
-    }
-    .file-remove {
-      background: none;
-      border: none;
-      color: var(--pb-gray-400);
-      cursor: pointer;
-      padding: var(--pb-space-1);
-      border-radius: var(--pb-radius-sm);
-      display: flex;
-    }
-    .file-remove:hover { color: var(--pb-error-500); background: var(--pb-error-50); }
+    .retake-btn .material-symbols-rounded { font-size: 18px; }
+    .retake-btn:hover { background: rgba(0,0,0,.8); }
 
     /* 버튼 */
     .form-actions {
@@ -739,6 +722,18 @@ export class Step2IndividualComponent implements OnInit, OnDestroy {
   onCameraCapture(file: File): void {
     this.cameraOpen.set(false);
     this.setFile(file);
+  }
+
+  retakePhoto(): void {
+    this.selectedFile = null;
+    this.selectedFileName.set(null);
+    this.thumbnailUrl.set(null);
+    this.fileSize.set('');
+    if (this.ocrAutoFilled()) {
+      this.ocrAutoFilled.set(false);
+      this.form.patchValue({ birthDate: '', genderDigit: '' }, { emitEvent: false });
+    }
+    this.cameraOpen.set(true);
   }
 
   removeFile(event: Event): void {

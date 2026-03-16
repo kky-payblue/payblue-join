@@ -322,15 +322,17 @@ import { IdCameraGuideComponent } from '../../../shared/components/id-camera-gui
                 </button>
               </div>
             } @else {
-              <div class="file-done">
+              <div class="file-preview-full">
                 @if (docThumbnailUrl()) {
-                  <img class="file-thumb" [src]="docThumbnailUrl()" alt="사업자등록증" />
+                  <img class="preview-img" [src]="docThumbnailUrl()" alt="사업자등록증" />
                 } @else {
-                  <span class="material-symbols-rounded file-done-icon">description</span>
+                  <div class="preview-file-icon">
+                    <span class="material-symbols-rounded">description</span>
+                  </div>
                 }
-                <span class="file-done-name">{{ selectedFileName() }}</span>
-                <button type="button" class="file-done-remove" (click)="removeFile($event)">
-                  <span class="material-symbols-rounded">close</span>
+                <button type="button" class="retake-btn" (click)="retakeDocPhoto()">
+                  <span class="material-symbols-rounded">photo_camera</span>
+                  재촬영
                 </button>
               </div>
             }
@@ -372,15 +374,17 @@ import { IdCameraGuideComponent } from '../../../shared/components/id-camera-gui
                 </button>
               </div>
             } @else {
-              <div class="file-done">
+              <div class="file-preview-full">
                 @if (idThumbnailUrl()) {
-                  <img class="file-thumb" [src]="idThumbnailUrl()" alt="신분증" />
+                  <img class="preview-img" [src]="idThumbnailUrl()" alt="신분증" />
                 } @else {
-                  <span class="material-symbols-rounded file-done-icon">badge</span>
+                  <div class="preview-file-icon">
+                    <span class="material-symbols-rounded">badge</span>
+                  </div>
                 }
-                <span class="file-done-name">{{ idFileName() }}</span>
-                <button type="button" class="file-done-remove" (click)="removeIdFile($event)">
-                  <span class="material-symbols-rounded">close</span>
+                <button type="button" class="retake-btn" (click)="retakeIdPhoto()">
+                  <span class="material-symbols-rounded">photo_camera</span>
+                  재촬영
                 </button>
               </div>
             }
@@ -474,7 +478,7 @@ import { IdCameraGuideComponent } from '../../../shared/components/id-camera-gui
     }
     .file-upload-zone:hover { border-color: var(--pb-primary-300); background: var(--pb-primary-50); }
     .file-upload-zone.drag-over { border-color: var(--pb-primary-500); background: var(--pb-primary-50); }
-    .file-upload-zone.has-file { border-style: solid; border-color: var(--pb-success-400); background: var(--pb-success-50); padding: var(--pb-space-4) var(--pb-space-3); }
+    .file-upload-zone.has-file { border-style: solid; border-color: var(--pb-success-400); background: var(--pb-success-50); padding: 0; overflow: hidden; }
     .file-upload-zone.error { border-color: var(--pb-error-500); background: var(--pb-error-50); }
     .upload-placeholder { display: flex; flex-direction: column; align-items: center; gap: var(--pb-space-2); }
     .upload-placeholder-icon { font-size: 2.5rem; color: var(--pb-gray-300); }
@@ -495,13 +499,21 @@ import { IdCameraGuideComponent } from '../../../shared/components/id-camera-gui
     .upload-action-camera:hover { background: var(--pb-primary-100); }
     @media (min-width: 641px) { .upload-action-camera { display: none; } .upload-actions { justify-content: center; } }
     @media (max-width: 640px) { .upload-action-file { display: none; } }
-    .file-done { display: flex; flex-direction: column; align-items: center; gap: var(--pb-space-2); position: relative; width: 100%; }
-    .file-thumb { width: 64px; height: 64px; object-fit: cover; border-radius: var(--pb-radius-md); border: 1px solid var(--pb-gray-200); }
-    .file-done-icon { font-size: 2.5rem; color: var(--pb-success-500); }
-    .file-done-name { font-size: var(--pb-text-xs); color: var(--pb-gray-600); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
-    .file-done-remove { position: absolute; top: -4px; right: -4px; background: var(--pb-gray-100); border: none; color: var(--pb-gray-400); cursor: pointer; padding: 2px; border-radius: 50%; display: flex; line-height: 1; }
-    .file-done-remove .material-symbols-rounded { font-size: 16px; }
-    .file-done-remove:hover { color: var(--pb-error-500); background: var(--pb-error-50); }
+    .file-preview-full { position: relative; width: 100%; }
+    .preview-img { width: 100%; display: block; border-radius: calc(var(--pb-radius-lg) - 2px); }
+    .preview-file-icon { display: flex; flex-direction: column; align-items: center; padding: var(--pb-space-6) var(--pb-space-4); }
+    .preview-file-icon .material-symbols-rounded { font-size: 2.5rem; color: var(--pb-success-500); }
+    .retake-btn {
+      position: absolute; bottom: var(--pb-space-2); right: var(--pb-space-2);
+      display: flex; align-items: center; gap: 4px;
+      padding: var(--pb-space-1) var(--pb-space-2);
+      background: rgba(0,0,0,.6); color: #fff; border: none;
+      border-radius: var(--pb-radius-md); font-size: var(--pb-text-xs);
+      font-weight: var(--pb-weight-semibold); font-family: var(--pb-font-primary);
+      cursor: pointer; backdrop-filter: blur(4px); transition: background .15s ease-out;
+    }
+    .retake-btn .material-symbols-rounded { font-size: 16px; }
+    .retake-btn:hover { background: rgba(0,0,0,.8); }
     .security-notice {
       display: flex; align-items: center; justify-content: center; gap: var(--pb-space-1);
       font-size: var(--pb-text-xs); color: var(--pb-gray-400); margin: 0;
@@ -752,6 +764,22 @@ export class Step2BusinessComponent implements OnInit, OnDestroy {
     const file = input.files?.[0];
     if (file) this.setIdFile(file);
     input.value = '';
+  }
+
+  retakeDocPhoto(): void {
+    this.selectedFile = null;
+    this.selectedFileName.set(null);
+    this.docThumbnailUrl.set(null);
+    this.docFileSize.set('');
+    this.docCameraOpen.set(true);
+  }
+
+  retakeIdPhoto(): void {
+    this.idFile = null;
+    this.idFileName.set(null);
+    this.idThumbnailUrl.set(null);
+    this.idFileSize.set('');
+    this.idCameraOpen.set(true);
   }
 
   openDocCameraGuide(): void {

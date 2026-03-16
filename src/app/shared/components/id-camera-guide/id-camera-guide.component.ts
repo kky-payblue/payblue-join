@@ -66,14 +66,18 @@ type DetectPhase = 'waiting' | 'detected' | 'stabilizing' | 'blurry';
            [class.txt--stable]="phase()==='stabilizing'"
            [class.txt--blurry]="phase()==='blurry'">
           @switch (phase()) {
-            @case ('waiting') { 신분증을 프레임 안에 맞춰주세요 }
+            @case ('waiting') { 프레임 안에 신분증 전체가 보이도록 맞춰주세요 }
             @case ('detected') { 움직이지 마세요... }
             @case ('stabilizing') { 자동 촬영 중... }
             @case ('blurry') { 선명하지 않습니다. 다시 촬영합니다. }
           }
         </p>
         <p class="txt txt-b" [style.top]="'calc(50% + '+(gr().h/2+12)+'px)'">
-          주민등록증, 운전면허증, 여권</p>
+          @switch (phase()) {
+            @case ('waiting') { 신분증이 프레임보다 작게, 여유 있게 띄워주세요 }
+            @default { 주민등록증, 운전면허증, 여권 }
+          }
+        </p>
 
         <div class="top-bar">
           @if (flashOk()) {
