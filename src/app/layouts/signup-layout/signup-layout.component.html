@@ -35,47 +35,49 @@
   <!-- Right: Form Area -->
   <div class="form-wrapper">
     <div class="form-inner">
-      <!-- Stepper -->
-      <nav class="stepper-container" aria-label="가입 진행 단계">
-        <ol class="stepper">
-          @for (step of stepStatus(); track step.number; let last = $last) {
-            <li class="stepper-step">
-              <div class="step-indicator">
-                <span
-                  class="step-dot"
-                  [class.active]="step.isActive"
+      <!-- Stepper (hidden on step 0) -->
+      @if (!isPreparationStep()) {
+        <nav class="stepper-container" aria-label="가입 진행 단계">
+          <ol class="stepper">
+            @for (step of stepStatus(); track step.number; let last = $last) {
+              <li class="stepper-step">
+                <div class="step-indicator">
+                  <span
+                    class="step-dot"
+                    [class.active]="step.isActive"
+                    [class.completed]="step.isCompleted"
+                    [attr.aria-current]="step.isActive ? 'step' : null"
+                  >
+                    @if (step.isCompleted) {
+                      &#10003;
+                    } @else {
+                      {{ step.number }}
+                    }
+                  </span>
+                  <span
+                    class="step-label"
+                    [class.active]="step.isActive"
+                    [class.completed]="step.isCompleted"
+                  >
+                    {{ step.label }}
+                  </span>
+                </div>
+              </li>
+              @if (!last) {
+                <div
+                  class="step-connector"
                   [class.completed]="step.isCompleted"
-                  [attr.aria-current]="step.isActive ? 'step' : null"
-                >
-                  @if (step.isCompleted) {
-                    &#10003;
-                  } @else {
-                    {{ step.number }}
-                  }
-                </span>
-                <span
-                  class="step-label"
-                  [class.active]="step.isActive"
-                  [class.completed]="step.isCompleted"
-                >
-                  {{ step.label }}
-                </span>
-              </div>
-            </li>
-            @if (!last) {
-              <div
-                class="step-connector"
-                [class.completed]="step.isCompleted"
-              ></div>
+                ></div>
+              }
             }
-          }
-        </ol>
-      </nav>
+          </ol>
+        </nav>
 
-      <!-- Step Info -->
-      <div class="step-info">
-        {{ currentStep() }} / {{ steps().length }} 단계
-      </div>
+        <!-- Step Info -->
+        <div class="step-info">
+          {{ currentStep() }} / {{ steps().length }} 단계
+        </div>
+      }
 
       <!-- Form Content -->
       <main class="form-panel">

@@ -19,11 +19,18 @@ import { SignupService } from '../../../shared/services/signup.service';
       <form [formGroup]="form" (ngSubmit)="onSubmit()" class="step-form">
         <!-- 정산 계좌 섹션 -->
         <fieldset class="form-section">
-          <legend class="section-title">정산 계좌</legend>
+          <div class="account-notice">
+            <span class="material-symbols-rounded account-notice-icon">info</span>
+            <p class="account-notice-text">
+              가입자와 예금주는 동일인만 가능합니다.<br/>
+              계좌가 준비되지 않으셨으면 고객센터나 앱 내에서<br/>
+              정산정보 등록을 다시 해주세요.
+            </p>
+          </div>
 
           <div class="form-field">
             <label for="bankName" class="form-label">
-              은행 <span class="required">*</span>
+              은행
             </label>
             <select
               id="bankName"
@@ -37,16 +44,12 @@ import { SignupService } from '../../../shared/services/signup.service';
                 <option [value]="bank">{{ bank }}</option>
               }
             </select>
-            <div class="field-feedback">
-              @if (isFieldInvalid('bankName') && form.get('bankName')?.errors?.['required']) {
-                <span class="hint error">은행을 선택해 주세요.</span>
-              }
-            </div>
+            <div class="field-feedback"></div>
           </div>
 
           <div class="form-field">
             <label for="accountNumber" class="form-label">
-              계좌번호 <span class="required">*</span>
+              계좌번호
             </label>
             <input
               id="accountNumber"
@@ -58,9 +61,6 @@ import { SignupService } from '../../../shared/services/signup.service';
               inputmode="numeric"
             />
             <div class="field-feedback">
-              @if (isFieldInvalid('accountNumber') && form.get('accountNumber')?.errors?.['required']) {
-                <span class="hint error">계좌번호를 입력해 주세요.</span>
-              }
               @if (isFieldInvalid('accountNumber') && form.get('accountNumber')?.errors?.['pattern']) {
                 <span class="hint error">숫자만 입력해 주세요.</span>
               }
@@ -69,7 +69,7 @@ import { SignupService } from '../../../shared/services/signup.service';
 
           <div class="form-field">
             <label for="accountHolder" class="form-label">
-              예금주 <span class="required">*</span>
+              예금주
             </label>
             <input
               id="accountHolder"
@@ -79,18 +79,12 @@ import { SignupService } from '../../../shared/services/signup.service';
               [class.error]="isFieldInvalid('accountHolder')"
               placeholder="예금주명을 입력하세요"
             />
-            <div class="field-feedback">
-              @if (isFieldInvalid('accountHolder') && form.get('accountHolder')?.errors?.['required']) {
-                <span class="hint error">예금주를 입력해 주세요.</span>
-              }
-            </div>
+            <div class="field-feedback"></div>
           </div>
         </fieldset>
 
         <!-- 약관 동의 섹션 -->
         <fieldset class="form-section">
-          <legend class="section-title">약관 동의</legend>
-
           <label class="checkbox-item checkbox-all">
             <input type="checkbox" [checked]="allChecked()" (change)="toggleAll($event)" />
             <span class="checkbox-box">
@@ -193,39 +187,41 @@ import { SignupService } from '../../../shared/services/signup.service';
     .step-container {
       max-width: var(--pb-container-sm);
       margin: 0 auto;
-      padding: var(--pb-space-8) var(--pb-space-4);
+      padding: var(--pb-space-5) var(--pb-space-4);
     }
-    .step-header { margin-bottom: var(--pb-space-8); }
+    .step-header { margin-bottom: var(--pb-space-5); }
     .step-title {
       font-size: var(--pb-text-2xl);
       font-weight: var(--pb-weight-bold);
       color: var(--pb-gray-900);
-      margin: 0 0 var(--pb-space-2);
+      margin: 0 0 var(--pb-space-1);
     }
     .step-description {
-      font-size: var(--pb-text-base);
+      font-size: var(--pb-text-sm);
       color: var(--pb-gray-500);
       margin: 0;
+      word-break: keep-all;
+      line-height: var(--pb-leading-normal);
     }
     .step-form {
       display: flex;
       flex-direction: column;
-      gap: var(--pb-form-group-gap);
+      gap: var(--pb-space-5);
     }
     .form-section { border: none; padding: 0; margin: 0; }
     .section-title {
       font-size: var(--pb-text-lg);
       font-weight: var(--pb-weight-semibold);
       color: var(--pb-gray-800);
-      margin-bottom: var(--pb-space-5);
-      padding-bottom: var(--pb-space-3);
+      margin-bottom: var(--pb-space-3);
+      padding-bottom: var(--pb-space-2);
       border-bottom: 1px solid var(--pb-gray-200);
     }
     .form-field {
       display: flex;
       flex-direction: column;
-      gap: var(--pb-space-2);
-      margin-bottom: var(--pb-space-4);
+      gap: var(--pb-space-1);
+      margin-bottom: var(--pb-space-3);
     }
     .form-field:last-child { margin-bottom: 0; }
     .form-label {
@@ -235,11 +231,35 @@ import { SignupService } from '../../../shared/services/signup.service';
     }
     .required { color: var(--pb-error-500); }
 
+    .account-notice {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--pb-space-2);
+      padding: var(--pb-space-3) var(--pb-space-4);
+      background: var(--pb-gray-50);
+      border: 1px solid var(--pb-gray-200);
+      border-radius: var(--pb-radius-md);
+      margin-bottom: var(--pb-space-4);
+    }
+    .account-notice-icon {
+      font-size: 20px;
+      color: var(--pb-primary-400);
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+    .account-notice-text {
+      margin: 0;
+      font-size: var(--pb-text-sm);
+      color: var(--pb-gray-700);
+      line-height: var(--pb-leading-loose);
+      word-break: keep-all;
+    }
+
     .form-input,
     .form-select {
       width: 100%;
-      min-height: 48px;
-      padding: var(--pb-form-input-padding);
+      min-height: 44px;
+      padding: var(--pb-space-2) var(--pb-space-3);
       border: 1.5px solid var(--pb-gray-200);
       border-radius: var(--pb-radius-md);
       font-size: var(--pb-text-base);
@@ -270,12 +290,13 @@ import { SignupService } from '../../../shared/services/signup.service';
       border-color: var(--pb-error-500);
       background: var(--pb-error-50);
     }
-    .field-feedback { min-height: 1.25rem; }
+    .field-feedback { min-height: 0; }
     .hint {
       font-size: var(--pb-text-xs);
       display: flex;
       align-items: center;
       gap: var(--pb-space-1);
+      word-break: keep-all;
     }
     .hint.error { color: var(--pb-error-500); }
     .spinner {
@@ -293,8 +314,8 @@ import { SignupService } from '../../../shared/services/signup.service';
     .checkbox-item {
       display: flex;
       align-items: center;
-      gap: var(--pb-space-3);
-      padding: var(--pb-space-3) 0;
+      gap: var(--pb-space-2);
+      padding: var(--pb-space-2) 0;
       cursor: pointer;
       user-select: none;
     }
@@ -305,8 +326,8 @@ import { SignupService } from '../../../shared/services/signup.service';
       height: 0;
     }
     .checkbox-box {
-      width: 22px;
-      height: 22px;
+      width: 20px;
+      height: 20px;
       border: 2px solid var(--pb-gray-300);
       border-radius: var(--pb-radius-sm);
       display: flex;
@@ -328,6 +349,8 @@ import { SignupService } from '../../../shared/services/signup.service';
       display: flex;
       align-items: center;
       gap: var(--pb-space-2);
+      word-break: keep-all;
+      line-height: var(--pb-leading-normal);
     }
     .checkbox-all .checkbox-text {
       font-weight: var(--pb-weight-semibold);
@@ -376,11 +399,11 @@ import { SignupService } from '../../../shared/services/signup.service';
       display: flex;
       justify-content: space-between;
       gap: var(--pb-space-3);
-      padding-top: var(--pb-space-4);
+      padding-top: var(--pb-space-2);
     }
     .btn {
-      min-height: 48px;
-      padding: var(--pb-space-3) var(--pb-space-8);
+      min-height: 44px;
+      padding: var(--pb-space-2) var(--pb-space-6);
       border: none;
       border-radius: var(--pb-radius-md);
       font-size: var(--pb-text-base);
@@ -496,15 +519,22 @@ import { SignupService } from '../../../shared/services/signup.service';
     .terms-modal-btn:hover { background: var(--pb-primary-600); }
 
     @media (max-width: 640px) {
+      .step-container { padding: var(--pb-space-4) var(--pb-space-3); }
+      .step-header { margin-bottom: var(--pb-space-3); }
+      .step-title { font-size: var(--pb-text-xl); }
+      .step-form { gap: var(--pb-space-4); }
+      .section-title { margin-bottom: var(--pb-space-2); padding-bottom: var(--pb-space-2); font-size: var(--pb-text-base); }
+      .form-field { margin-bottom: var(--pb-space-2); }
       .form-actions { flex-direction: column-reverse; }
       .btn { width: 100%; }
+      .checkbox-text { flex-wrap: wrap; }
       .terms-modal {
         max-height: 90vh;
         border-radius: var(--pb-radius-md);
       }
-      .terms-modal-header { padding: var(--pb-space-4); }
-      .terms-modal-body { padding: var(--pb-space-4); }
-      .terms-modal-footer { padding: var(--pb-space-3) var(--pb-space-4); }
+      .terms-modal-header { padding: var(--pb-space-3); }
+      .terms-modal-body { padding: var(--pb-space-3); }
+      .terms-modal-footer { padding: var(--pb-space-3); }
     }
   `]
 })
@@ -525,9 +555,9 @@ export class Step3PaymentComponent implements OnInit, OnDestroy {
   ];
 
   readonly form: FormGroup = this.fb.group({
-    bankName: ['', [Validators.required]],
-    accountNumber: ['', [Validators.required, Validators.pattern('^[0-9]+$')]],
-    accountHolder: ['', [Validators.required]],
+    bankName: [''],
+    accountNumber: ['', [Validators.pattern('^[0-9]+$')]],
+    accountHolder: [''],
     agreeTerms: [false, [Validators.requiredTrue]],
     agreePrivacy: [false, [Validators.requiredTrue]],
     agreeMarketing: [false],

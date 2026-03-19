@@ -62,7 +62,7 @@ export interface BusinessVerification {
   status: 'active' | 'closed' | 'suspended';
 }
 
-export type SignupStep = 1 | 2 | 3 | 4;
+export type SignupStep = 0 | 1 | 2 | 3 | 4;
 
 export type PasswordStrength = 'weak' | 'medium' | 'strong';
 

@@ -1,5 +1,6 @@
 import { Component, inject, computed, OnInit, OnDestroy } from '@angular/core';
 import { Router, RouterOutlet, NavigationEnd } from '@angular/router';
+import { CommonModule } from '@angular/common';
 import { SignupService } from '../../shared/services/signup.service';
 import { SignupStep } from '../../shared/models/signup.model';
 import { Subscription } from 'rxjs';
@@ -8,7 +9,7 @@ import { filter } from 'rxjs/operators';
 @Component({
   selector: 'app-signup-layout',
   standalone: true,
-  imports: [RouterOutlet],
+  imports: [RouterOutlet, CommonModule],
   templateUrl: './signup-layout.component.html',
   styleUrl: './signup-layout.component.css',
 })
@@ -18,6 +19,7 @@ export class SignupLayoutComponent implements OnInit, OnDestroy {
   private routerSub: Subscription | null = null;
 
   readonly currentStep = this.signupService.currentStep;
+  readonly isPreparationStep = computed(() => this.currentStep() === 0);
 
   readonly steps = computed(() => {
     const isBusiness = this.signupService.memberType() === 'business';
@@ -60,7 +62,7 @@ export class SignupLayoutComponent implements OnInit, OnDestroy {
     const match = url.match(/\/step\/(\d)/);
     if (match) {
       const step = parseInt(match[1], 10) as SignupStep;
-      if (step >= 1 && step <= 4 && step !== this.currentStep()) {
+      if (step >= 0 && step <= 4 && step !== this.currentStep()) {
         this.signupService.goToStep(step);
       }
     }

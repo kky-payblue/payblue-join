@@ -100,6 +100,7 @@
   font-size: var(--pb-text-xs);
   color: var(--pb-gray-400);
   white-space: nowrap;
+  word-break: keep-all;
   transition: color var(--pb-duration-normal) var(--pb-ease-out);
 }
 
@@ -165,6 +166,15 @@
 
 .signup-footer a:hover {
   color: var(--pb-primary-700);
+}
+
+/* ── Mobile adjustments ── */
+@media (max-width: 640px) {
+  .stepper-container { padding: var(--pb-space-4) var(--pb-space-4) 0; }
+  .step-connector { width: 28px; margin: 0; margin-bottom: var(--pb-space-5); }
+  .form-panel { padding: var(--pb-space-3); }
+  .form-card { padding: var(--pb-space-4) var(--pb-space-3); }
+  .signup-footer { padding: var(--pb-space-4); font-size: var(--pb-text-xs); }
 }
 
 /* ══════════════════════════════════════════════

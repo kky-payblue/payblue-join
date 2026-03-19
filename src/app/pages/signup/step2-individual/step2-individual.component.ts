@@ -6,6 +6,7 @@ import { Subject, takeUntil } from 'rxjs';
 import { SignupService } from '../../../shared/services/signup.service';
 import { DaumPostcodeService } from '../../../shared/services/daum-postcode.service';
 import { IdOcrService } from '../../../shared/services/id-ocr.service';
+import { ValidationService } from '../../../shared/services/validation.service';
 import { IdCameraGuideComponent } from '../../../shared/components/id-camera-guide/id-camera-guide.component';
 
 @Component({
@@ -21,9 +22,39 @@ import { IdCameraGuideComponent } from '../../../shared/components/id-camera-gui
 
       <form [formGroup]="form" (ngSubmit)="onSubmit()" class="step-form">
 
-        <!-- 수동입력 모드: 신분증 먼저 촬영 → OCR로 주민번호 자동입력 -->
+        <!-- 비인증 모드: 신분증 촬영 (최상단) -->
         @if (!niceAutoFilled()) {
           <ng-container *ngTemplateOutlet="idUploadTpl"></ng-container>
+        }
+
+        <!-- 이름 -->
+        @if (niceAutoFilled()) {
+          <div class="form-field">
+            <label class="form-label">이름</label>
+            <input type="text" formControlName="name" class="form-input nice-filled" readonly />
+            <p class="field-help nice-auto-hint">
+              <span class="material-symbols-rounded help-icon nice-check">verified_user</span>
+              본인인증으로 자동 입력되었습니다.
+            </p>
+          </div>
+        } @else {
+          <div class="form-field">
+            <label for="name" class="form-label">이름 <span class="required">*</span></label>
+            <input
+              id="name"
+              type="text"
+              formControlName="name"
+              class="form-input"
+              [class.error]="isFieldInvalid('name')"
+              [class.ocr-filled]="nameOcrFilled()"
+              placeholder="이름을 입력하세요"
+            />
+            <div class="field-feedback">
+              @if (isFieldInvalid('name') && form.get('name')?.errors?.['required']) {
+                <span class="hint error">이름을 입력해 주세요.</span>
+              }
+            </div>
+          </div>
         }
 
         <!-- 주민등록번호 앞자리 + 성별 -->
@@ -47,7 +78,7 @@ import { IdCameraGuideComponent } from '../../../shared/components/id-camera-gui
                 maxlength="6"
                 inputmode="numeric"
                 autocomplete="off"
-                [readonly]="rrnAutoFilled()"
+                [readonly]="niceAutoFilled()"
                 (focus)="rrnFocused.set(true)"
                 (blur)="rrnFocused.set(false)"
               />
@@ -64,7 +95,7 @@ import { IdCameraGuideComponent } from '../../../shared/components/id-camera-gui
                 maxlength="1"
                 inputmode="numeric"
                 autocomplete="off"
-                [readonly]="rrnAutoFilled()"
+                [readonly]="niceAutoFilled()"
                 (focus)="rrnFocused.set(true)"
                 (blur)="rrnFocused.set(false)"
               />
@@ -100,17 +131,43 @@ import { IdCameraGuideComponent } from '../../../shared/components/id-camera-gui
               본인인증으로 자동 입력되었습니다.
             </p>
           } @else if (ocrAutoFilled()) {
-            <p class="field-help nice-auto-hint">
-              <span class="material-symbols-rounded help-icon nice-check">document_scanner</span>
-              신분증에서 자동 인식되었습니다.
+            <p class="field-help ocr-edit-hint">
+              <span class="material-symbols-rounded help-icon">edit_note</span>
+              자동 입력된 정보가 틀리면 직접 수정해 주세요.
             </p>
           } @else {
             <p class="field-help">
               <span class="material-symbols-rounded help-icon">info</span>
-              생년월일 6자리와 뒷자리 첫 번째 숫자(성별 구분)만 입력합니다.
+              신분증을 촬영하면 자동으로 입력됩니다.
             </p>
           }
         </div>
+
+        <!-- 연락처 -->
+        @if (niceAutoFilled()) {
+          <div class="form-field">
+            <label class="form-label">연락처</label>
+            <input type="tel" formControlName="phone" class="form-input nice-filled" readonly />
+          </div>
+        } @else {
+          <div class="form-field">
+            <label for="phone" class="form-label">연락처 <span class="required">*</span></label>
+            <input
+              id="phone"
+              type="tel"
+              formControlName="phone"
+              class="form-input"
+              [class.error]="isFieldInvalid('phone')"
+              placeholder="010-1234-5678"
+              autocomplete="tel"
+            />
+            <div class="field-feedback">
+              @if (isFieldInvalid('phone') && form.get('phone')?.errors?.['invalidPhone']) {
+                <span class="hint error">올바른 연락처를 입력해 주세요.</span>
+              }
+            </div>
+          </div>
+        }
 
         <!-- 주소 -->
         <div class="form-field">
@@ -235,11 +292,11 @@ import { IdCameraGuideComponent } from '../../../shared/components/id-camera-gui
               <div class="upload-placeholder">
                 <span class="material-symbols-rounded upload-placeholder-icon">badge</span>
                 @if (!niceAutoFilled()) {
-                  <p class="upload-placeholder-text">신분증을 촬영하면<br/>주민번호가 자동 입력됩니다</p>
+                  <p class="upload-placeholder-text">신분증을 촬영하면<br/>이름, 주민번호가 자동 입력됩니다</p>
                 } @else {
                   <p class="upload-placeholder-text">신분증을 등록해 주세요</p>
                 }
-                <p class="upload-placeholder-sub">주민등록증, 운전면허증, 여권</p>
+                <p class="upload-placeholder-sub">주민등록증, 운전면허증</p>
               </div>
               <div class="upload-actions">
                 <button type="button" class="upload-action-btn upload-action-camera" (click)="openCameraGuide()">
@@ -261,7 +318,7 @@ import { IdCameraGuideComponent } from '../../../shared/components/id-camera-gui
                     <span class="preview-file-name">{{ selectedFileName() }}</span>
                   </div>
                 }
-                @if (!rrnAutoFilled()) {
+                @if (!niceAutoFilled()) {
                   <button type="button" class="retake-btn" (click)="retakePhoto()">
                     <span class="material-symbols-rounded">photo_camera</span>
                     재촬영
@@ -323,6 +380,8 @@ import { IdCameraGuideComponent } from '../../../shared/components/id-camera-gui
       font-size: var(--pb-text-base);
       color: var(--pb-gray-500);
       margin: 0;
+      word-break: keep-all;
+      line-height: var(--pb-leading-normal);
     }
     .step-form {
       display: flex;
@@ -444,6 +503,7 @@ import { IdCameraGuideComponent } from '../../../shared/components/id-camera-gui
       background: var(--pb-error-50);
     }
     .form-input[readonly] { background: var(--pb-gray-50); cursor: pointer; }
+    .form-input.nice-filled { background: var(--pb-gray-50); border-color: var(--pb-success-300); color: var(--pb-gray-700); cursor: default; }
     .address-detail { margin-top: var(--pb-space-2); }
 
     .input-wrapper {
@@ -474,6 +534,7 @@ import { IdCameraGuideComponent } from '../../../shared/components/id-camera-gui
       display: flex;
       align-items: center;
       gap: var(--pb-space-1);
+      word-break: keep-all;
     }
     .hint.error { color: var(--pb-error-500); }
 
@@ -484,6 +545,7 @@ import { IdCameraGuideComponent } from '../../../shared/components/id-camera-gui
       font-size: var(--pb-text-xs);
       color: var(--pb-gray-500);
       margin: 0;
+      word-break: keep-all;
     }
     .help-icon {
       font-size: 14px;
@@ -492,6 +554,8 @@ import { IdCameraGuideComponent } from '../../../shared/components/id-camera-gui
     .nice-check { color: var(--pb-success-500); }
     .nice-auto-hint { color: var(--pb-success-600); }
     .rrn-input.auto-filled { color: var(--pb-gray-600); }
+    .form-input.ocr-filled { border-color: var(--pb-primary-300); background: var(--pb-primary-50); }
+    .ocr-edit-hint { color: var(--pb-primary-600); word-break: keep-all; }
 
     /* 파일 업로드 */
     .file-upload-zone {
@@ -518,7 +582,7 @@ import { IdCameraGuideComponent } from '../../../shared/components/id-camera-gui
     .file-upload-zone.error { border-color: var(--pb-error-500); background: var(--pb-error-50); }
     .upload-placeholder { display: flex; flex-direction: column; align-items: center; gap: var(--pb-space-2); }
     .upload-placeholder-icon { font-size: 2.5rem; color: var(--pb-gray-300); }
-    .upload-placeholder-text { font-size: var(--pb-text-sm); color: var(--pb-gray-500); margin: 0; }
+    .upload-placeholder-text { font-size: var(--pb-text-sm); color: var(--pb-gray-500); margin: 0; word-break: keep-all; line-height: var(--pb-leading-normal); }
     .upload-placeholder-sub { font-size: var(--pb-text-xs); color: var(--pb-gray-400); margin: 0; }
     .upload-placeholder-text br { display: block; }
     .ocr-badge {
@@ -637,6 +701,7 @@ export class Step2IndividualComponent implements OnInit, OnDestroy {
   readonly rrnFocused = signal(false);
   readonly niceAutoFilled = signal(false);
   readonly ocrAutoFilled = signal(false);
+  readonly nameOcrFilled = signal(false);
   readonly cameraOpen = signal(false);
   readonly rrnAutoFilled = computed(() => this.niceAutoFilled() || this.ocrAutoFilled());
   readonly ocrProcessing = this.idOcrService.processing;
@@ -653,6 +718,8 @@ export class Step2IndividualComponent implements OnInit, OnDestroy {
   private fileSubmitAttempted = false;
 
   readonly form: FormGroup = this.fb.group({
+    name: ['', [Validators.required]],
+    phone: ['', [Validators.required, ValidationService.phoneValidator()]],
     birthDate: ['', [Validators.required, Step2IndividualComponent.birthDateValidator()]],
     genderDigit: ['', [Validators.required, Step2IndividualComponent.genderValidator()]],
     address: ['', [Validators.required]],
@@ -664,6 +731,7 @@ export class Step2IndividualComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.restoreFormData();
     this.applyNiceAuthData();
+    this.setupPhoneFormat();
     this.setupNumericFilter('birthDate', 6);
     this.setupNumericFilter('genderDigit', 1);
   }
@@ -731,7 +799,8 @@ export class Step2IndividualComponent implements OnInit, OnDestroy {
     this.fileSize.set('');
     if (this.ocrAutoFilled()) {
       this.ocrAutoFilled.set(false);
-      this.form.patchValue({ birthDate: '', genderDigit: '' }, { emitEvent: false });
+      this.nameOcrFilled.set(false);
+      this.form.patchValue({ name: '', birthDate: '', genderDigit: '' }, { emitEvent: false });
     }
     this.cameraOpen.set(true);
   }
@@ -769,6 +838,15 @@ export class Step2IndividualComponent implements OnInit, OnDestroy {
     if (!this.canProceed()) return;
 
     this.fileRequired.set(false);
+
+    // Save name/phone back to step1 data
+    const step1 = this.signupService.formData().step1;
+    this.signupService.updateStep1({
+      ...step1,
+      name: this.form.value.name,
+      phone: this.form.value.phone,
+    });
+
     const { birthDate, genderDigit, address, addressDetail, receiptBusinessName, salesCategory } = this.form.value;
     this.signupService.updateStep2Individual({
       birthDate,
@@ -813,10 +891,15 @@ export class Step2IndividualComponent implements OnInit, OnDestroy {
   private async runOcr(file: File): Promise<void> {
     const result = await this.idOcrService.extractFromImage(file);
     if (result) {
-      this.form.patchValue({
+      const patch: Record<string, string> = {
         birthDate: result.birthDate,
         genderDigit: result.genderDigit,
-      }, { emitEvent: false });
+      };
+      if (result.name) {
+        patch['name'] = result.name;
+        this.nameOcrFilled.set(true);
+      }
+      this.form.patchValue(patch, { emitEvent: false });
       this.ocrAutoFilled.set(true);
     }
   }
@@ -852,6 +935,14 @@ export class Step2IndividualComponent implements OnInit, OnDestroy {
   }
 
   private saveFormData(): void {
+    // Save name/phone back to step1
+    const step1 = this.signupService.formData().step1;
+    this.signupService.updateStep1({
+      ...step1,
+      name: this.form.value.name,
+      phone: this.form.value.phone,
+    });
+
     const { birthDate, genderDigit, address, addressDetail, receiptBusinessName, salesCategory } = this.form.value;
     this.signupService.updateStep2Individual({
       birthDate, genderDigit, address, addressDetail,
@@ -862,12 +953,27 @@ export class Step2IndividualComponent implements OnInit, OnDestroy {
 
   private applyNiceAuthData(): void {
     const niceAuth = this.signupService.niceAuthResult();
-    if (niceAuth?.verified && niceAuth.birthDate && niceAuth.genderDigit) {
+    const step1 = this.signupService.formData().step1;
+
+    if (niceAuth?.verified) {
       this.form.patchValue({
-        birthDate: niceAuth.birthDate,
-        genderDigit: niceAuth.genderDigit,
+        name: step1.name || niceAuth.name,
+        phone: step1.phone || niceAuth.phone,
       }, { emitEvent: false });
       this.niceAutoFilled.set(true);
+
+      if (niceAuth.birthDate && niceAuth.genderDigit) {
+        this.form.patchValue({
+          birthDate: niceAuth.birthDate,
+          genderDigit: niceAuth.genderDigit,
+        }, { emitEvent: false });
+      }
+    } else if (step1.name) {
+      // Manual entry: restore name/phone from step1 if previously saved
+      this.form.patchValue({
+        name: step1.name,
+        phone: step1.phone,
+      }, { emitEvent: false });
     }
   }
 
@@ -882,6 +988,23 @@ export class Step2IndividualComponent implements OnInit, OnDestroy {
       const numbersOnly = value.replace(/[^0-9]/g, '').slice(0, maxLen);
       if (numbersOnly !== value) {
         control.setValue(numbersOnly, { emitEvent: false });
+      }
+      if (fieldName === 'birthDate' && numbersOnly.length === 6) {
+        document.getElementById('genderDigit')?.focus();
+      }
+    });
+  }
+
+  private setupPhoneFormat(): void {
+    const phoneControl = this.form.get('phone');
+    if (!phoneControl) return;
+    phoneControl.valueChanges.pipe(
+      takeUntil(this.destroy$),
+    ).subscribe(value => {
+      if (!value) return;
+      const formatted = ValidationService.formatPhone(value);
+      if (formatted !== value) {
+        phoneControl.setValue(formatted, { emitEvent: false });
       }
     });
   }

@@ -3,7 +3,7 @@ import { SignupFormData, SignupStep, BasicInfoData, BusinessInfoData, Individual
 
 @Injectable({ providedIn: 'root' })
 export class SignupService {
-  private readonly _currentStep = signal<SignupStep>(1);
+  private readonly _currentStep = signal<SignupStep>(0);
   private readonly _formData = signal<SignupFormData>({
     step1: { memberType: 'business', name: '', phone: '' },
     step2: { businessNumber: '', businessName: '', ownerName: '', businessType: '', businessCategory: '', address: '', addressDetail: '', documentFile: null },
@@ -23,6 +23,7 @@ export class SignupService {
 
   readonly progressPercent = computed(() => {
     const step = this._currentStep();
+    if (step === 0) return 0;
     return Math.round(((step - 1) / 3) * 100);
   });
 
@@ -39,7 +40,7 @@ export class SignupService {
 
   prevStep(): void {
     const current = this._currentStep();
-    if (current > 1) {
+    if (current > 0) {
       this._currentStep.set((current - 1) as SignupStep);
     }
   }
@@ -84,7 +85,7 @@ export class SignupService {
   }
 
   reset(): void {
-    this._currentStep.set(1);
+    this._currentStep.set(0);
     this._isComplete.set(false);
     this._isSubmitting.set(false);
     this._formData.set({

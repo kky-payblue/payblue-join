@@ -5,6 +5,7 @@ import {
 } from '@angular/core';
 
 const ID_RATIO = 85.6 / 54; // ISO/IEC 7810 ID card
+const A4_RATIO = 210 / 297; // A4 portrait (width / height)
 const GUIDE_W = 0.82;
 const JPEG_Q = 0.85;
 
@@ -29,19 +30,20 @@ type DetectPhase = 'waiting' | 'too_close' | 'detected' | 'stabilizing' | 'blurr
   template: `
     @if (isOpen) {
       <div class="ov" [class.ov--ready]="ready()" [class.ov--err]="!!err()"
-           role="dialog" aria-modal="true" aria-label="신분증 촬영">
+           role="dialog" aria-modal="true" [attr.aria-label]="mode==='document'?'서류 촬영':'신분증 촬영'">
         <video #videoEl class="vid" autoplay playsinline [attr.aria-hidden]="true"></video>
         <svg class="svg" aria-hidden="true">
           <defs>
             <mask id="gm">
               <rect width="100%" height="100%" fill="white"/>
               <rect [attr.x]="gr().x" [attr.y]="gr().y" [attr.width]="gr().w"
-                    [attr.height]="gr().h" rx="12" ry="12" fill="black"/>
+                    [attr.height]="gr().h" [attr.rx]="mode==='document'?8:12" [attr.ry]="mode==='document'?8:12" fill="black"/>
             </mask>
           </defs>
           <rect width="100%" height="100%" fill="rgba(0,0,0,.55)" mask="url(#gm)"/>
         </svg>
-        <div class="frame" [class.frame--too-close]="phase()==='too_close'"
+        <div class="frame" [class.frame--doc]="mode==='document'"
+             [class.frame--too-close]="phase()==='too_close'"
              [class.frame--detected]="phase()==='detected'"
              [class.frame--stable]="phase()==='stabilizing'"
              [class.frame--blurry]="phase()==='blurry'"
@@ -64,24 +66,34 @@ type DetectPhase = 'waiting' | 'too_close' | 'detected' | 'stabilizing' | 'blurr
         </div>
 
         <!-- Status text -->
-        <p class="txt txt-t" [style.bottom]="'calc(50% + '+(gr().h/2+20)+'px)'"
+        <p class="txt txt-t"
+           [style.top.px]="gr().y - 32"
+           [style.bottom]="'auto'"
            [class.txt--too-close]="phase()==='too_close'"
            [class.txt--detected]="phase()==='detected'"
            [class.txt--stable]="phase()==='stabilizing'"
            [class.txt--blurry]="phase()==='blurry'">
-          @switch (phase()) {
-            @case ('waiting') { 프레임 안에 신분증 전체가 보이도록 맞춰주세요 }
-            @case ('too_close') { 신분증을 카메라에서 조금 떨어뜨려 주세요 }
-            @case ('detected') { 움직이지 마세요... }
-            @case ('stabilizing') { 자동 촬영 중... }
-            @case ('blurry') { 선명하지 않습니다. 다시 촬영합니다. }
+          @if (mode === 'document') {
+            프레임 안에 서류 전체가 보이도록 맞춰주세요
+          } @else {
+            @switch (phase()) {
+              @case ('waiting') { 프레임 안에 신분증 전체가 보이도록 맞춰주세요 }
+              @case ('too_close') { 신분증을 카메라에서 조금 떨어뜨려 주세요 }
+              @case ('detected') { 움직이지 마세요... }
+              @case ('stabilizing') { 자동 촬영 중... }
+              @case ('blurry') { 선명하지 않습니다. 다시 촬영합니다. }
+            }
           }
         </p>
-        <p class="txt txt-b" [style.top]="'calc(50% + '+(gr().h/2+12)+'px)'">
-          @switch (phase()) {
-            @case ('waiting') { 신분증이 프레임보다 작게, 여유 있게 띄워주세요 }
-            @case ('too_close') { 프레임 안쪽에 여백이 보여야 자동 촬영됩니다 }
-            @default { 주민등록증, 운전면허증, 여권 }
+        <p class="txt txt-b" [style.top.px]="gr().y + gr().h + 12">
+          @if (mode === 'document') {
+            촬영 버튼을 눌러 촬영해 주세요
+          } @else {
+            @switch (phase()) {
+              @case ('waiting') { 신분증이 프레임보다 작게, 여유 있게 띄워주세요 }
+              @case ('too_close') { 프레임 안쪽에 여백이 보여야 자동 촬영됩니다 }
+              @default { 주민등록증, 운전면허증, 여권 }
+            }
           }
         </p>
 
@@ -100,7 +112,11 @@ type DetectPhase = 'waiting' | 'too_close' | 'detected' | 'stabilizing' | 'blurr
                   (click)="capture()" aria-label="수동 촬영">
             <span class="cap-r"></span><span class="cap-i"></span>
           </button>
-          <p class="auto-hint">자동 촬영 활성화됨</p>
+          @if (mode === 'document') {
+            <p class="auto-hint">수동 촬영</p>
+          } @else {
+            <p class="auto-hint">자동 촬영 활성화됨</p>
+          }
         </div>
         @if (err()) {
           <div class="err-ov">
@@ -127,6 +143,7 @@ type DetectPhase = 'waiting' | 'too_close' | 'detected' | 'stabilizing' | 'blurr
     .frame { position:absolute; border:2px solid rgba(255,255,255,.5);
       border-radius:12px; pointer-events:none;
       transition:border-color .3s ease, box-shadow .3s ease; }
+    .frame--doc { border-radius:8px; }
     .frame--too-close { border-color:rgba(251,146,60,.9);
       box-shadow:0 0 0 2px rgba(251,146,60,.25); animation:pulse-close 1s ease-in-out infinite; }
     @keyframes pulse-close { 0%,100%{box-shadow:0 0 0 2px rgba(251,146,60,.25)} 50%{box-shadow:0 0 0 6px rgba(251,146,60,.15)} }
@@ -159,8 +176,9 @@ type DetectPhase = 'waiting' | 'too_close' | 'detected' | 'stabilizing' | 'blurr
     .txt { position:absolute; left:0; right:0; text-align:center; color:#fff;
       font-family:var(--pb-font-primary,sans-serif); pointer-events:none;
       margin:0; text-shadow:0 1px 4px rgba(0,0,0,.6);
-      transition:color .3s ease; }
-    .txt-t { font-size:var(--pb-text-base,1rem); font-weight:var(--pb-weight-semibold,600); }
+      transition:color .3s ease; word-break:keep-all; padding:0 16px; }
+    .txt-t { font-size:var(--pb-text-base,1rem); font-weight:var(--pb-weight-semibold,600);
+      transform:translateY(-100%); }
     .txt--too-close { color:#fb923c; }
     .txt--detected { color:#facc15; }
     .txt--stable { color:#4ade80; }
@@ -177,9 +195,9 @@ type DetectPhase = 'waiting' | 'too_close' | 'detected' | 'stabilizing' | 'blurr
     .cb .material-symbols-rounded { font-size:24px; }
     .cb-sp { width:44px; height:44px; }
     .bot-bar { position:absolute; bottom:0; left:0; right:0; display:flex;
-      flex-direction:column; align-items:center; gap:8px;
-      padding:24px 16px calc(env(safe-area-inset-bottom,16px)+24px); z-index:10; }
-    .cap { position:relative; width:72px; height:72px; background:transparent;
+      flex-direction:column; align-items:center; gap:6px;
+      padding:16px 16px calc(env(safe-area-inset-bottom,12px)+16px); z-index:10; }
+    .cap { position:relative; width:64px; height:64px; background:transparent;
       border:none; cursor:pointer; -webkit-tap-highlight-color:transparent; padding:0; }
     .cap:disabled { opacity:.4; cursor:not-allowed; }
     .cap-r { position:absolute; inset:0; border:4px solid #fff; border-radius:50%;
@@ -213,6 +231,7 @@ export class IdCameraGuideComponent implements OnChanges, OnDestroy {
   private readonly zone = inject(NgZone);
 
   @Input() isOpen = false;
+  @Input() mode: 'id' | 'document' = 'id';
   @Output() captured = new EventEmitter<File>();
   @Output() closed = new EventEmitter<void>();
 
@@ -229,10 +248,41 @@ export class IdCameraGuideComponent implements OnChanges, OnDestroy {
   readonly stableProgress = signal(0);
   private readonly vp = signal({ w: window.innerWidth, h: window.innerHeight });
 
+  private get guideRatio(): number {
+    return this.mode === 'document' ? A4_RATIO : ID_RATIO;
+  }
+
   readonly gr = computed(() => {
     const v = this.vp();
+    const ratio = this.mode === 'document' ? A4_RATIO : ID_RATIO;
+    if (ratio < 1) {
+      // Portrait (A4): fit within safe area between top-bar and capture button
+      // Reserve: top ~70px (safe area + bar), bottom ~140px (button + hint + safe area)
+      // Plus ~30px each for guide text above/below the frame
+      const topReserve = 70 + 30;
+      const botReserve = 140 + 30;
+      const availH = v.h - topReserve - botReserve;
+      const maxW = Math.round(v.w * 0.86);  // 86% of width (side margins)
+
+      // Constrain by whichever dimension is tighter
+      let w: number, h: number;
+      const hFromW = maxW / ratio;
+      if (hFromW <= availH) {
+        w = maxW;
+        h = Math.round(hFromW);
+      } else {
+        h = Math.round(availH);
+        w = Math.round(h * ratio);
+      }
+
+      // Shift upward slightly so frame sits between top-bar and capture button
+      const centerY = Math.round((v.h - botReserve + topReserve) / 2);
+      const y = Math.round(centerY - h / 2);
+      return { x: Math.round((v.w - w) / 2), y, w, h };
+    }
+    // Landscape (ID card): constrain by width
     const w = Math.round(v.w * GUIDE_W);
-    const h = Math.round(w / ID_RATIO);
+    const h = Math.round(w / ratio);
     return { x: Math.round((v.w - w) / 2), y: Math.round((v.h - h) / 2), w, h };
   });
 
@@ -317,7 +367,10 @@ export class IdCameraGuideComponent implements OnChanges, OnDestroy {
       });
       await video.play();
       this.ready.set(true);
-      this.startDetection();
+      // Document mode: manual capture only, skip auto-detection
+      if (this.mode !== 'document') {
+        this.startDetection();
+      }
     } catch (e) {
       this.err.set(this.permMsg(e));
     }
@@ -387,8 +440,9 @@ export class IdCameraGuideComponent implements OnChanges, OnDestroy {
     const gh = Math.min(Math.round(guide.h * sy), vh - gy);
 
     // Draw guide area onto small analysis canvas
+    const ratio = this.guideRatio;
     const aw = ANAL_W;
-    const ah = Math.round(aw / ID_RATIO);
+    const ah = Math.round(ratio < 1 ? aw / ratio : aw / ratio);
     anal.width = aw;
     anal.height = ah;
     const ctx = anal.getContext('2d', { willReadFrequently: true });
@@ -586,12 +640,13 @@ export class IdCameraGuideComponent implements OnChanges, OnDestroy {
 
   /** Check sharpness of the final captured JPEG */
   private async checkFinalSharpness(file: File): Promise<boolean> {
+    const ratio = this.guideRatio;
     return new Promise<boolean>((resolve) => {
       const img = new Image();
       img.onload = () => {
         const c = document.createElement('canvas');
         const aw = ANAL_W;
-        const ah = Math.round(aw / ID_RATIO);
+        const ah = Math.round(aw / ratio);
         c.width = aw;
         c.height = ah;
         const ctx = c.getContext('2d', { willReadFrequently: true });
@@ -640,7 +695,8 @@ export class IdCameraGuideComponent implements OnChanges, OnDestroy {
     const blob = await new Promise<Blob>((res, rej) =>
       out.toBlob(b => b ? res(b) : rej(new Error('toBlob failed')), 'image/jpeg', JPEG_Q));
     const ts = new Date().toISOString().replace(/[:.]/g, '-');
-    return new File([blob], `id-card-${ts}.jpg`, { type: 'image/jpeg' });
+    const prefix = this.mode === 'document' ? 'document' : 'id-card';
+    return new File([blob], `${prefix}-${ts}.jpg`, { type: 'image/jpeg' });
   }
 
   private detectFlash(): void {

@@ -159,6 +159,7 @@ import { SignupService } from '../../../shared/services/signup.service';
       font-weight: var(--pb-weight-bold);
       color: var(--pb-gray-900);
       margin: 0 0 var(--pb-space-3);
+      word-break: keep-all;
     }
 
     .complete-description {
@@ -166,6 +167,7 @@ import { SignupService } from '../../../shared/services/signup.service';
       color: var(--pb-gray-500);
       margin: 0 0 var(--pb-space-10);
       line-height: var(--pb-leading-normal);
+      word-break: keep-all;
     }
 
     .complete-description strong {
@@ -235,6 +237,8 @@ import { SignupService } from '../../../shared/services/signup.service';
       font-size: var(--pb-text-sm);
       color: var(--pb-gray-500);
       margin: var(--pb-space-1) 0 0;
+      word-break: keep-all;
+      line-height: var(--pb-leading-normal);
     }
 
     /* 앱 다운로드 */
@@ -294,6 +298,10 @@ import { SignupService } from '../../../shared/services/signup.service';
     }
 
     @media (max-width: 640px) {
+      .complete-container { padding: var(--pb-space-6) var(--pb-space-4); }
+      .success-icon-wrapper { margin-bottom: var(--pb-space-6); }
+      .complete-description { margin-bottom: var(--pb-space-6); }
+      .steps-guide { padding: var(--pb-space-5); margin-bottom: var(--pb-space-6); }
       .download-buttons { flex-direction: column; }
       .download-btn { justify-content: center; }
     }

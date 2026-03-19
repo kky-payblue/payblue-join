@@ -1,11 +1,10 @@
-import { Component, inject, signal, computed, OnInit, OnDestroy } from '@angular/core';
+import { Component, inject, signal, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { Subject, takeUntil } from 'rxjs';
 import { SignupService } from '../../../shared/services/signup.service';
 import { NiceAuthService } from '../../../shared/services/nice-auth.service';
-import { ValidationService } from '../../../shared/services/validation.service';
 import { MemberType, NiceAuthData } from '../../../shared/models/signup.model';
 
 @Component({
@@ -16,10 +15,10 @@ import { MemberType, NiceAuthData } from '../../../shared/models/signup.model';
     <div class="step-container">
       <div class="step-header">
         <h2 class="step-title">기본 정보</h2>
-        <p class="step-description">서비스 이용을 위한 기본 정보를 입력해 주세요.</p>
+        <p class="step-description">회원 유형을 선택하고 본인인증을 진행해 주세요.</p>
       </div>
 
-      <form [formGroup]="form" (ngSubmit)="onSubmit()" class="step-form">
+      <form [formGroup]="form" class="step-form">
         <!-- 회원 유형 선택 -->
         <div class="form-field">
           <span class="form-label">회원 유형 <span class="required">*</span></span>
@@ -54,22 +53,15 @@ import { MemberType, NiceAuthData } from '../../../shared/models/signup.model';
           <span class="form-label">본인인증 <span class="required">*</span></span>
 
           @if (isNiceVerified()) {
-            <!-- 인증 완료 상태 -->
+            <!-- 인증 완료 상태 (뒤로가기 시 표시) -->
             <div class="nice-verified-card">
               <div class="nice-verified-header">
                 <span class="material-symbols-rounded nice-verified-icon">verified_user</span>
                 <span class="nice-verified-text">본인인증 완료</span>
               </div>
-              <div class="nice-verified-info">
-                <div class="nice-info-row">
-                  <span class="nice-info-label">이름</span>
-                  <span class="nice-info-value">{{ form.get('name')?.value }}</span>
-                </div>
-                <div class="nice-info-row">
-                  <span class="nice-info-label">연락처</span>
-                  <span class="nice-info-value">{{ form.get('phone')?.value }}</span>
-                </div>
-              </div>
+              <button type="button" class="btn btn-primary proceed-btn" (click)="proceedToStep2()">
+                다음 단계로 계속하기
+              </button>
               <button type="button" class="nice-reverify-btn" (click)="startNiceAuth()">
                 재인증
               </button>
@@ -100,69 +92,11 @@ import { MemberType, NiceAuthData } from '../../../shared/models/signup.model';
                   <span>{{ niceAuthService.errorMessage() }}</span>
                 </div>
               }
-              @if (!manualEntry()) {
-                <button type="button" class="manual-entry-btn" (click)="enableManualEntry()">
-                  본인인증 없이 직접 입력
-                </button>
-              }
+              <button type="button" class="manual-entry-btn" (click)="skipToManualEntry()">
+                본인인증 없이 직접 입력
+              </button>
             </div>
           }
-        </div>
-
-        <!-- 이름 / 연락처 -->
-        @if (!isNiceVerified()) {
-          @if (manualEntry()) {
-            <div class="form-field">
-              <label for="name" class="form-label">
-                이름 <span class="required">*</span>
-              </label>
-              <input
-                id="name"
-                type="text"
-                formControlName="name"
-                class="form-input"
-                [class.error]="isFieldInvalid('name')"
-                placeholder="홍길동"
-                autocomplete="name"
-              />
-              <div class="field-feedback">
-                @if (isFieldInvalid('name') && form.get('name')?.errors?.['required']) {
-                  <span class="hint error">이름을 입력해 주세요.</span>
-                }
-              </div>
-            </div>
-
-            <div class="form-field">
-              <label for="phone" class="form-label">
-                연락처 <span class="required">*</span>
-              </label>
-              <input
-                id="phone"
-                type="tel"
-                formControlName="phone"
-                class="form-input"
-                [class.error]="isFieldInvalid('phone')"
-                placeholder="010-1234-5678"
-                autocomplete="tel"
-              />
-              <div class="field-feedback">
-                @if (isFieldInvalid('phone') && form.get('phone')?.errors?.['invalidPhone']) {
-                  <span class="hint error">올바른 연락처를 입력해 주세요.</span>
-                }
-              </div>
-            </div>
-          }
-        }
-
-        <!-- 버튼 -->
-        <div class="form-actions">
-          <button
-            type="submit"
-            class="btn btn-primary"
-            [disabled]="!canProceed()"
-          >
-            다음 단계
-          </button>
         </div>
       </form>
     </div>
@@ -184,6 +118,8 @@ import { MemberType, NiceAuthData } from '../../../shared/models/signup.model';
       font-size: var(--pb-text-base);
       color: var(--pb-gray-500);
       margin: 0;
+      word-break: keep-all;
+      line-height: var(--pb-leading-normal);
     }
     .step-form {
       display: flex;
@@ -247,10 +183,13 @@ import { MemberType, NiceAuthData } from '../../../shared/models/signup.model';
       font-size: var(--pb-text-base);
       font-weight: var(--pb-weight-semibold);
       color: var(--pb-gray-800);
+      word-break: keep-all;
     }
     .type-desc {
       font-size: var(--pb-text-xs);
       color: var(--pb-gray-500);
+      word-break: keep-all;
+      line-height: var(--pb-leading-normal);
     }
 
     /* 본인인증 섹션 */
@@ -264,6 +203,8 @@ import { MemberType, NiceAuthData } from '../../../shared/models/signup.model';
       font-size: var(--pb-text-sm);
       color: var(--pb-gray-500);
       margin: 0 0 var(--pb-space-4);
+      word-break: keep-all;
+      line-height: var(--pb-leading-normal);
     }
     .nice-auth-btn {
       display: inline-flex;
@@ -316,10 +257,12 @@ import { MemberType, NiceAuthData } from '../../../shared/models/signup.model';
       border-radius: var(--pb-radius-lg);
       background: var(--pb-success-50);
       padding: var(--pb-space-5);
+      text-align: center;
     }
     .nice-verified-header {
       display: flex;
       align-items: center;
+      justify-content: center;
       gap: var(--pb-space-2);
       margin-bottom: var(--pb-space-4);
     }
@@ -331,28 +274,6 @@ import { MemberType, NiceAuthData } from '../../../shared/models/signup.model';
       font-size: var(--pb-text-sm);
       font-weight: var(--pb-weight-semibold);
       color: var(--pb-success-700);
-    }
-    .nice-verified-info {
-      display: flex;
-      flex-direction: column;
-      gap: var(--pb-space-2);
-      margin-bottom: var(--pb-space-4);
-    }
-    .nice-info-row {
-      display: flex;
-      align-items: center;
-      gap: var(--pb-space-3);
-    }
-    .nice-info-label {
-      font-size: var(--pb-text-xs);
-      color: var(--pb-gray-500);
-      min-width: 48px;
-      flex-shrink: 0;
-    }
-    .nice-info-value {
-      font-size: var(--pb-text-sm);
-      font-weight: var(--pb-weight-medium);
-      color: var(--pb-gray-800);
     }
     .nice-reverify-btn {
       display: inline-flex;
@@ -369,58 +290,7 @@ import { MemberType, NiceAuthData } from '../../../shared/models/signup.model';
     }
     .nice-reverify-btn:hover { color: var(--pb-primary-500); }
 
-    /* 입력 필드 */
-    .form-input {
-      width: 100%;
-      min-height: 48px;
-      padding: var(--pb-form-input-padding);
-      border: 1.5px solid var(--pb-gray-200);
-      border-radius: var(--pb-radius-md);
-      font-size: var(--pb-text-base);
-      font-family: var(--pb-font-primary);
-      color: var(--pb-gray-900);
-      background: #fff;
-      transition: border-color var(--pb-duration-fast) var(--pb-ease-out),
-                  box-shadow var(--pb-duration-fast) var(--pb-ease-out);
-      box-sizing: border-box;
-    }
-    .form-input::placeholder { color: var(--pb-gray-400); }
-    .form-input:focus {
-      outline: none;
-      border-color: var(--pb-primary-400);
-      box-shadow: 0 0 0 3px var(--pb-primary-50);
-    }
-    .form-input.error {
-      border-color: var(--pb-error-500);
-      background: var(--pb-error-50);
-    }
-    .form-input[readonly] { background: var(--pb-gray-50); cursor: default; }
-    .field-feedback { min-height: 1.25rem; }
-    .hint {
-      font-size: var(--pb-text-xs);
-      display: flex;
-      align-items: center;
-      gap: var(--pb-space-1);
-    }
-    .hint.error { color: var(--pb-error-500); }
-
-    .spinner {
-      display: inline-block;
-      width: 16px;
-      height: 16px;
-      border: 2px solid rgba(255, 255, 255, 0.3);
-      border-top-color: #fff;
-      border-radius: 50%;
-      animation: spin 0.6s linear infinite;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-
     /* 버튼 */
-    .form-actions {
-      display: flex;
-      justify-content: flex-end;
-      padding-top: var(--pb-space-4);
-    }
     .btn {
       min-height: 48px;
       padding: var(--pb-space-3) var(--pb-space-8);
@@ -436,6 +306,21 @@ import { MemberType, NiceAuthData } from '../../../shared/models/signup.model';
     .btn-primary { background: var(--pb-primary-500); color: #fff; }
     .btn-primary:hover:not(:disabled) { background: var(--pb-primary-600); }
     .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .proceed-btn {
+      width: 100%;
+      margin-bottom: var(--pb-space-3);
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
 
     @media (max-width: 640px) {
       .member-type-group { grid-template-columns: 1fr 1fr; }
@@ -445,9 +330,20 @@ import { MemberType, NiceAuthData } from '../../../shared/models/signup.model';
       }
       .type-icon { font-size: 1.5rem; }
       .type-label { font-size: var(--pb-text-sm); }
-      .type-desc { font-size: 10px; }
-      .form-actions { flex-direction: column; }
-      .btn { width: 100%; }
+      .type-desc { font-size: var(--pb-text-xs); line-height: var(--pb-leading-tight); }
+      .nice-auth-section { padding: var(--pb-space-5) var(--pb-space-4); }
+    }
+    @media (max-width: 360px) {
+      .member-type-group { grid-template-columns: 1fr; }
+      .type-card {
+        flex-direction: row;
+        padding: var(--pb-space-3) var(--pb-space-4);
+        gap: var(--pb-space-3);
+        text-align: left;
+      }
+      .type-icon { font-size: 1.5rem; flex-shrink: 0; }
+      .type-card .type-label,
+      .type-card .type-desc { text-align: left; }
     }
   `]
 })
@@ -460,12 +356,9 @@ export class Step1BasicComponent implements OnInit, OnDestroy {
 
   readonly selectedType = signal<MemberType>('business');
   readonly isNiceVerified = signal(false);
-  readonly manualEntry = signal(false);
 
   readonly form: FormGroup = this.fb.group({
     memberType: ['business', [Validators.required]],
-    name: ['', [Validators.required]],
-    phone: ['', [Validators.required, ValidationService.phoneValidator()]],
   });
 
   ngOnInit(): void {
@@ -478,34 +371,11 @@ export class Step1BasicComponent implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
-  isFieldInvalid(field: string): boolean {
-    const control = this.form.get(field);
-    return !!control && control.invalid && (control.dirty || control.touched);
-  }
-
-  canProceed(): boolean {
-    return this.form.valid && (this.isNiceVerified() || this.manualEntry());
-  }
-
-  enableManualEntry(): void {
-    this.manualEntry.set(true);
-    this.setupPhoneFormat();
-  }
-
   startNiceAuth(): void {
     this.niceAuthService.requestVerification()
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (result) => {
-          // Auto-fill name and phone from NICE result
-          this.form.patchValue({
-            name: result.name,
-            phone: result.phone,
-          });
-          this.form.get('name')?.markAsDirty();
-          this.form.get('phone')?.markAsDirty();
-
-          // Store NICE auth data
           const niceAuthData: NiceAuthData = {
             verified: true,
             name: result.name,
@@ -517,6 +387,16 @@ export class Step1BasicComponent implements OnInit, OnDestroy {
           };
           this.signupService.updateNiceAuth(niceAuthData);
           this.isNiceVerified.set(true);
+
+          // Save step1 data and auto-navigate to step 2
+          const memberType = this.form.get('memberType')?.value;
+          this.signupService.updateStep1({
+            memberType,
+            name: result.name,
+            phone: result.phone,
+            niceAuth: niceAuthData,
+          });
+          this.navigateToStep2(memberType);
         },
         error: () => {
           this.isNiceVerified.set(false);
@@ -524,15 +404,25 @@ export class Step1BasicComponent implements OnInit, OnDestroy {
       });
   }
 
-  onSubmit(): void {
-    if (!this.canProceed()) {
-      this.form.markAllAsTouched();
-      return;
-    }
+  skipToManualEntry(): void {
+    const memberType = this.form.get('memberType')?.value;
+    this.signupService.updateStep1({ memberType, name: '', phone: '' });
+    this.navigateToStep2(memberType);
+  }
 
-    const { memberType, name, phone } = this.form.value;
+  proceedToStep2(): void {
+    const memberType = this.form.get('memberType')?.value;
     const niceAuth = this.signupService.niceAuthResult();
-    this.signupService.updateStep1({ memberType, name, phone, niceAuth });
+    this.signupService.updateStep1({
+      memberType,
+      name: niceAuth?.name ?? '',
+      phone: niceAuth?.phone ?? '',
+      niceAuth,
+    });
+    this.navigateToStep2(memberType);
+  }
+
+  private navigateToStep2(memberType: MemberType): void {
     this.signupService.goToStep(2);
     const route = memberType === 'individual' ? '/step/2-individual' : '/step/2';
     this.router.navigate([route]);
@@ -540,40 +430,17 @@ export class Step1BasicComponent implements OnInit, OnDestroy {
 
   private restoreFormData(): void {
     const saved = this.signupService.formData().step1;
-    if (saved.name) {
-      this.form.patchValue(saved, { emitEvent: false });
-      this.selectedType.set(saved.memberType);
-    }
-    // Restore NICE auth state
+    this.form.patchValue({ memberType: saved.memberType }, { emitEvent: false });
+    this.selectedType.set(saved.memberType);
     if (saved.niceAuth?.verified) {
       this.isNiceVerified.set(true);
       this.niceAuthService.status.set('success');
-    } else if (saved.name && !saved.niceAuth) {
-      // Restore manual entry state
-      this.manualEntry.set(true);
-      this.setupPhoneFormat();
     }
-  }
-
-  private setupPhoneFormat(): void {
-    const phoneControl = this.form.get('phone');
-    if (!phoneControl) return;
-
-    phoneControl.valueChanges.pipe(
-      takeUntil(this.destroy$),
-    ).subscribe(value => {
-      if (!value) return;
-      const formatted = ValidationService.formatPhone(value);
-      if (formatted !== value) {
-        phoneControl.setValue(formatted, { emitEvent: false });
-      }
-    });
   }
 
   private setupTypeSync(): void {
     const typeControl = this.form.get('memberType');
     if (!typeControl) return;
-
     typeControl.valueChanges.pipe(
       takeUntil(this.destroy$),
     ).subscribe(value => {
